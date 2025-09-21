@@ -19,3 +19,11 @@ class PersonaOut(PersonaBase):
 
     class Config:
         from_attributes = True
+
+class PersonaUpdate(BaseModel):
+    nombre: Optional[str] = None
+    email: Optional[EmailStr] = None
+    dni: Optional[str] = None
+    telefono: Optional[str] = None
+    fecha_nacimiento: Optional[date] = None
+    habilitado: Optional[bool] = None
