@@ -73,3 +73,21 @@ class TurnoOut(TurnoBase):
 
     class Config:
         from_attributes = True
+
+
+
+    class TurnoUpdate(BaseModel):
+        fecha: Optional[date] = None
+        hora: Optional[str] = None
+        estado: Optional[EstadoLiteral] = None
+        persona_id: Optional[int] = None
+
+    @field_validator("hora")
+    def validar_formato_hora_opcional(cls, v):
+        if v is None:
+            return v
+        try:
+            datetime.strptime(v, "%H:%M")
+        except Exception:
+            raise ValueError("Hora invalida. Formato esperado: HH:MM")
+        return v
