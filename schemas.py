@@ -1,6 +1,10 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
-from datetime import date
+from pydantic import BaseModel, EmailStr, field_validator
+from typing import Optional, Literal
+from datetime import date, datetime
+
+EstadoLiteral = Literal["pendiente", "cancelado", "confirmado", "asistido"]
+
+#abm de personas
 
 class PersonaBase(BaseModel):
     nombre: str
@@ -27,3 +31,63 @@ class PersonaUpdate(BaseModel):
     telefono: Optional[str] = None
     fecha_nacimiento: Optional[date] = None
     habilitado: Optional[bool] = None
+
+#----------------------
+#abm de turnos
+#----------------------
+
+class TurnoBase(BaseModel):
+    fecha: date
+    hora: str
+    estado: Optional[EstadoLiteral] = "pendiente"
+
+    @field_validator("hora")
+    def validar_formato_hora(cls, v):
+        try:
+            datetime.strptime(v, "%H:%M")
+        except Exception:
+            raise ValueError("Hora invalida. Formato esperado: HH:MM")
+        return v
+
+class TurnoCreateConDNI(BaseModel):
+    fecha: date
+    hora: str
+    estado: Optional[EstadoLiteral] = "pendiente"
+    dni: str
+
+    @field_validator("hora")
+    def validar_formato_hora(cls, v):
+        try:
+            datetime.strptime(v, "%H:%M")
+        except Exception:
+            raise ValueError("Hora invalida. Formato esperado: HH:MM")
+        return v
+
+class TurnoCreate(TurnoBase):
+    persona_id: int
+
+class TurnoOut(TurnoBase):
+    id: int
+    persona_id: int
+    dni: str
+
+    class Config:
+        from_attributes = True
+
+
+
+    class TurnoUpdate(BaseModel):
+        fecha: Optional[date] = None
+        hora: Optional[str] = None
+        estado: Optional[EstadoLiteral] = None
+        persona_id: Optional[int] = None
+
+    @field_validator("hora")
+    def validar_formato_hora_opcional(cls, v):
+        if v is None:
+            return v
+        try:
+            datetime.strptime(v, "%H:%M")
+        except Exception:
+            raise ValueError("Hora invalida. Formato esperado: HH:MM")
+        return v

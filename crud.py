@@ -34,3 +34,38 @@ def delete_persona(db: Session, persona_id: int) -> bool:
     db.delete(p)
     db.commit()
     return True
+
+def create_turno(db: Session, turno_in: schemas.TurnoCreate) -> models.Turno:
+    t = models.Turno(**turno_in.dict())
+    db.add(t)
+    db.commit()
+    db.refresh(t)
+    return t
+
+def get_turnos(db: Session, skip: int = 0, limit: int = 100) -> List[models.Turno]:
+    return db.query(models.Turno).offset(skip).limit(limit).all()
+
+def get_turno(db: Session, turno_id: int) -> Optional[models.Turno]:
+    return db.query(models.Turno).filter(models.Turno.id == turno_id).first()
+
+def get_persona_por_dni(db: Session, dni: str) -> Optional[models.Persona]:
+    return db.query(models.Persona).filter(models.Persona.dni == dni).first()
+
+def update_turno(db: Session, turno_id: int, turno_up: schemas.TurnoUpdate) -> Optional[models.Turno]:
+    t = get_turno(db, turno_id)
+    if not t:
+        return None
+    for k, v in turno_up.dict(exclude_unset=True).items():
+        setattr(t, k, v)
+    db.add(t)
+    db.commit()
+    db.refresh(t)
+    return t
+
+def delete_turno(db: Session, turno_id: int) -> bool:
+    t = get_turno(db, turno_id)
+    if not t:
+        return False
+    db.delete(t)
+    db.commit()
+    return True
