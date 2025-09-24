@@ -8,21 +8,21 @@ Link Postman: https://cejasm96-5484561.postman.co/workspace/SL-P---GRUPO-1's-Wor
 ENDPOINTS
 ----------------------------------
 BRIAN MICAEL RODRIGUEZ
-PUT /turnos/id
-DELETE /turnos/id
-----------------------------------
-MARTIN PABLO SCARFO
-POST /turnos
-GET /turnos
-GET /turnos/id
+(POST /personas, 
+GET /personas, 
+GET /personas/id)
 ----------------------------------
 MARIANO HERNAN CEJAS
-PUT /personas/id
-DELETE /personas/id
-Get /turnos-disponibles?fecha=YYYY-MM-DD
+(PUT /personas/id, 
+DELETE /personas/id, 
+GET /turnos-disponibles?fecha=YYYY-MM-DD)
+----------------------------------
+MARTIN PABLO SCARFO
+(POST /turnos, 
+GET /turnos, 
+GET /turnos/id)
 ----------------------------------
 GIOVANNI ALEJANDRO SALVI
-POST /personas
-GET /personas
-GET /personas/id
+(PUT /turnos/id, 
+DELETE /turnos/id)
 ----------------------------------
