@@ -17,55 +17,52 @@ def crear_persona(persona: schemas.PersonaCreate, db: Session = Depends(get_db))
         raise HTTPException(status_code=400, detail="Email ya registrado")
     if db.query(models.Persona).filter(models.Persona.dni == persona.dni).first():
         raise HTTPException(status_code=400, detail="DNI ya registrado")
-    p = crud.create_persona(db, persona)
-    today = date.today()
-    edad = today.year - p.fecha_nacimiento.year - ((today.month, today.day) < (p.fecha_nacimiento.month, p.fecha_nacimiento.day))
+    persona_creada = crud.create_persona(db, persona)
+    edad_calculada = services.calcular_edad(persona_creada.fecha_nacimiento)
     return schemas.PersonaOut(
-        id=p.id,
-        nombre=p.nombre,
-        email=p.email,
-        dni=p.dni,
-        telefono=p.telefono,
-        fecha_nacimiento=p.fecha_nacimiento,
-        habilitado=p.habilitado,
-        edad=edad
+        id=persona_creada.id,
+        nombre=persona_creada.nombre,
+        email=persona_creada.email,
+        dni=persona_creada.dni,
+        telefono=persona_creada.telefono,
+        fecha_nacimiento=persona_creada.fecha_nacimiento,
+        habilitado=persona_creada.habilitado,
+        edad=edad_calculada
     )
 
 @app.get("/personas", response_model=list[schemas.PersonaOut])
 def listar_personas(db: Session = Depends(get_db)):
     personas = crud.get_personas(db)
-    out = []
-    for p in personas:
-        today = date.today()
-        edad = today.year - p.fecha_nacimiento.year - ((today.month, today.day) < (p.fecha_nacimiento.month, p.fecha_nacimiento.day))
-        out.append(schemas.PersonaOut(
-            id=p.id,
-            nombre=p.nombre,
-            email=p.email,
-            dni=p.dni,
-            telefono=p.telefono,
-            fecha_nacimiento=p.fecha_nacimiento,
-            habilitado=p.habilitado,
-            edad=edad
+    lista_de_personas = []
+    for persona_db in personas:
+        edad_calculada = services.calcular_edad(persona_db.fecha_nacimiento)
+        lista_de_personas.append(schemas.PersonaOut(
+            id=persona_db.id,
+            nombre=persona_db.nombre,
+            email=persona_db.email,
+            dni=persona_db.dni,
+            telefono=persona_db.telefono,
+            fecha_nacimiento=persona_db.fecha_nacimiento,
+            habilitado=persona_db.habilitado,
+            edad=edad_calculada
         ))
-    return out
+    return lista_de_personas
 
 @app.get("/personas/{persona_id}", response_model=schemas.PersonaOut)
 def obtener_persona(persona_id: int, db: Session = Depends(get_db)):
-    p = crud.get_persona(db, persona_id)
-    if not p:
+    persona_obtenida = crud.get_persona(db, persona_id)
+    if not persona_obtenida:
         raise HTTPException(status_code=404, detail="Persona no encontrada")
-    today = date.today()
-    edad = today.year - p.fecha_nacimiento.year - ((today.month, today.day) < (p.fecha_nacimiento.month, p.fecha_nacimiento.day))
+    edad_calculada = services.calcular_edad(persona_obtenida.fecha_nacimiento)
     return schemas.PersonaOut(
-        id=p.id,
-        nombre=p.nombre,
-        email=p.email,
-        dni=p.dni,
-        telefono=p.telefono,
-        fecha_nacimiento=p.fecha_nacimiento,
-        habilitado=p.habilitado,
-        edad=edad
+        id=persona_obtenida.id,
+        nombre=persona_obtenida.nombre,
+        email=persona_obtenida.email,
+        dni=persona_obtenida.dni,
+        telefono=persona_obtenida.telefono,
+        fecha_nacimiento=persona_obtenida.fecha_nacimiento,
+        habilitado=persona_obtenida.habilitado,
+        edad=edad_calculada
     )
 
 
@@ -79,30 +76,30 @@ def actualizar_persona(persona_id: int, persona_up: schemas.PersonaUpdate, db: S
     if persona_up.dni and persona_up.dni != db_persona.dni and db.query(models.Persona).filter(models.Persona.dni == persona_up.dni).first():
         raise HTTPException(status_code=400, detail="DNI ya registrado")
     
-    p = crud.update_persona(db, persona_id, persona_up)
-    today = date.today()
-    edad = today.year - p.fecha_nacimiento.year - ((today.month, today.day) < (p.fecha_nacimiento.month, p.fecha_nacimiento.day))
+    persona_actualizada = crud.update_persona(db, persona_id, persona_up)
+    edad_calculada = services.calcular_edad(persona_actualizada.fecha_nacimiento) 
     return schemas.PersonaOut(
-        id=p.id,
-        nombre=p.nombre,
-        email=p.email,
-        dni=p.dni,
-        telefono=p.telefono,
-        fecha_nacimiento=p.fecha_nacimiento,
-        habilitado=p.habilitado,
-        edad=edad
+        id=persona_actualizada.id,
+        nombre=persona_actualizada.nombre,
+        email=persona_actualizada.email,
+        dni=persona_actualizada.dni,
+        telefono=persona_actualizada.telefono,
+        fecha_nacimiento=persona_actualizada.fecha_nacimiento,
+        habilitado=persona_actualizada.habilitado,
+        edad=edad_calculada
     )
 
 @app.delete("/personas/{persona_id}")
 def eliminar_persona(persona_id: int, db: Session = Depends(get_db)):
-    ok = crud.delete_persona(db, persona_id)
-    if not ok:
+    eliminacion_exitosa = crud.delete_persona(db, persona_id)
+    if not eliminacion_exitosa:
         raise HTTPException(status_code=404, detail="Persona no encontrada")
     return {"ok": True, "mensaje": "Persona eliminada"}
 
 @app.get("/turnos-disponibles")
 def turnos_disponibles(fecha: str, db: Session = Depends(get_db)):
-    from datetime import date
+    #from datetime import date
+    #Ya está el import al inicio del main
     try:
         fecha_obj = date.fromisoformat(fecha)
     except Exception:
@@ -126,65 +123,66 @@ def crear_turno(turno: schemas.TurnoCreateConDNI, db: Session = Depends(get_db))
         estado=turno.estado,
         persona_id=persona.id
     )
-    t = crud.create_turno(db, turno_data)
+    turno_creado = crud.create_turno(db, turno_data)
     return schemas.TurnoOut(
-        id=t.id,
-        fecha=t.fecha,
-        hora=t.hora,
-        estado=t.estado,
-        persona_id=t.persona_id,
+        id=turno_creado.id,
+        fecha=turno_creado.fecha,
+        hora=turno_creado.hora,
+        estado=turno_creado.estado,
+        persona_id=turno_creado.persona_id,
         dni=persona.dni
     )
 
 @app.get("/turnos", response_model=list[schemas.TurnoOut])
 def listar_turnos(db: Session = Depends(get_db)):
-    turnos = crud.get_turnos(db)
-    out = []
-    for t in turnos:
-        persona = crud.get_persona(db, t.persona_id)
-        out.append(schemas.TurnoOut(
-            id=t.id,
-            fecha=t.fecha,
-            hora=t.hora,
-            estado=t.estado,
-            persona_id=t.persona_id,
+    turnos_db = crud.get_turnos(db)
+    lista_de_turnos = []
+    for turno in turnos_db:
+        persona = crud.get_persona(db, turno.persona_id)
+        lista_de_turnos.append(schemas.TurnoOut(
+            id=turno.id,
+            fecha=turno.fecha,
+            hora=turno.hora,
+            estado=turno.estado,
+            persona_id=turno.persona_id,
             dni=persona.dni
         ))
-    return out
+    return lista_de_turnos
 
 @app.get("/turnos/{turno_id}", response_model=schemas.TurnoOut)
 def obtener_turno(turno_id: int, db: Session = Depends(get_db)):
-    t = crud.get_turno(db, turno_id)
-    if not t:
+    turno_obtenido = crud.get_turno(db, turno_id)
+    if not turno_obtenido:
         raise HTTPException(status_code=404, detail="Turno no encontrado")
-    persona = crud.get_persona(db, t.persona_id)
+    persona = crud.get_persona(db, turno_obtenido.persona_id)
     return schemas.TurnoOut(
-        id=t.id,
-        fecha=t.fecha,
-        hora=t.hora,
-        estado=t.estado,
-        persona_id=t.persona_id,
+        id=turno_obtenido.id,
+        fecha=turno_obtenido.fecha,
+        hora=turno_obtenido.hora,
+        estado=turno_obtenido.estado,
+        persona_id=turno_obtenido.persona_id,
         dni=persona.dni
     )
 
 @app.put("/turnos/{turno_id}", response_model=schemas.TurnoOut)
 def actualizar_turno(turno_id: int, turno_up: schemas.TurnoUpdate, db: Session = Depends(get_db)):
-    t = crud.update_turno(db, turno_id, turno_up)
-    if not t:
+    turno_actualizado = crud.update_turno(db, turno_id, turno_up)
+    if not turno_actualizado:
         raise HTTPException(status_code=404, detail="Turno no encontrado")
-    t_con_persona = db.query(models.Turno).join(models.Persona).filter(models.Turno.id == turno_id).first()
+    #t_con_persona = db.query(models.Turno).join(models.Persona).filter(models.Turno.id == turno_id).first()
+    #Usamos turno_actualizado en lugar de hacer una nueva consulta.
     return schemas.TurnoOut(
-        id=t_con_persona.id,
-        fecha=t_con_persona.fecha,
-        hora=t_con_persona.hora,
-        estado=t_con_persona.estado,
-        persona_id=t_con_persona.persona_id,
-        dni=t_con_persona.persona.dni
+        id=turno_actualizado.id,
+        fecha=turno_actualizado.fecha,
+        hora=turno_actualizado.hora,
+        estado=turno_actualizado.estado,
+        persona_id=turno_actualizado.persona_id,
+        dni=turno_actualizado.persona.dni
     )
 
 @app.delete("/turnos/{turno_id}")
 def eliminar_turno(turno_id: int, db: Session = Depends(get_db)):
-    ok = crud.delete_turno(db, turno_id)
-    if not ok:
+    eliminacion_exitosa = crud.delete_turno(db, turno_id)
+    if not eliminacion_exitosa:
         raise HTTPException(status_code=404, detail="Turno no encontrado")
     return {"ok": True, "mensaje": "Turno eliminado"}
