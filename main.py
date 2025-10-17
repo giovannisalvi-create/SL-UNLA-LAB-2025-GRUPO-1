@@ -166,9 +166,18 @@ def obtener_turno(turno_id: int, db: Session = Depends(get_db)):
 
 @app.put("/turnos/{turno_id}", response_model=schemas.TurnoOut)
 def actualizar_turno(turno_id: int, turno_up: schemas.TurnoUpdate, db: Session = Depends(get_db)):
+    turno_existente = crud.get_turno(db, turno_id)
+    if not turno_existente:
+        raise HTTPException(status_code=400, detail="Turno no encontrado")
+    
+    #Validar que el turno se puede modificar
+    if not services.puede_modificar_turno(turno_existente):
+        raise HTTPException(status_code=400, detail="No se puede modificar un turno asistido o cancelado")
+    
+    
     turno_actualizado = crud.update_turno(db, turno_id, turno_up)
     if not turno_actualizado:
-        raise HTTPException(status_code=404, detail="Turno no encontrado")
+        raise HTTPException(status_code=500, detail="Turno no encontrado")
     #t_con_persona = db.query(models.Turno).join(models.Persona).filter(models.Turno.id == turno_id).first()
     #Usamos turno_actualizado en lugar de hacer una nueva consulta.
     return schemas.TurnoOut(
@@ -180,9 +189,68 @@ def actualizar_turno(turno_id: int, turno_up: schemas.TurnoUpdate, db: Session =
         dni=turno_actualizado.persona.dni
     )
 
-@app.delete("/turnos/{turno_id}")
+@app.put("/turnos/{turno_id}/cancelar", response_model=schemas.TurnoOut)
+def cancelar_turno(turno_id: int, db: Session = Depends(get_db)):
+    turno = crud.get_turno(db, turno_id)
+    if not turno:
+        raise HTTPException(status_code=404, detail="Turno no encontrado")
+
+    if not services.puede_cancelar_turno(turno):
+        raise HTTPException(status_code=400, detail="No se pueden cancelar turnos asistidos")
+
+    if not services.puede_modificar_turno(turno):
+        raise HTTPException(status_code=400, detail="No se puede cancelar un turno cancelado")
+    
+    #Actuliza solo el estado a cancelado (acá hacemos la eliminación lógica)
+    turno_actualizado = crud.update_turno(db, turno_id, schemas.TurnoUpdate(estado="cancelado"))
+    if not turno_actualizado:
+        raise HTTPException(status_code=500, detail="Error al actualizar turno")
+    
+    persona = crud.get_persona(db, turno_actualizado.persona_id)
+    return schemas.TurnoOut(
+        id=turno_actualizado.id,
+        fecha=turno_actualizado.fecha,
+        hora=turno_actualizado.hora,
+        estado=turno_actualizado.estado,
+        persona_id=turno_actualizado.persona_id,
+        dni=persona.dni
+    )
+    
+@app.put("/turnos/{turno_id}/confirmar", response_model=schemas.TurnoOut)
+def confirmar_turno(turno_id: int, db: Session = Depends(get_db)):
+    turno = crud.get_turno(db, turno_id)
+    if not turno:
+        raise HTTPException(status_code=404, detail="Turno no encontrado")
+    
+    if not services.puede_modificar_turno(turno):
+        raise HTTPException(status_code=400, detail="No se puede confirmar un turno asistido o cancelado")
+    
+    #Actualiza el estado solo a confirmado
+    turno_actualizado = crud.update_turno(db, turno_id, schemas.TurnoUpdate(estado="confirmado"))
+    
+    if not turno_actualizado:
+        raise HTTPException(status_code=500, detail="Error al actualizar el turno")
+    
+    persona = crud.get_persona(db, turno_actualizado.persona_id)
+    return schemas.TurnoOut(
+        id=turno_actualizado.id,
+        fecha=turno_actualizado.fecha,
+        hora=turno_actualizado.hora,
+        estado=turno_actualizado.estado,
+        persona_id=turno_actualizado.persona_id,
+        dni=persona.dni
+    )
+
+""" @app.delete("/turnos/{turno_id}")
 def eliminar_turno(turno_id: int, db: Session = Depends(get_db)):
+    turno = crud.get_turno(db, turno_id)
+    if not turno:
+        raise HTTPException(status_code=404, detail="Turno no encontrado")
+    
+    if not services.puede_eliminar_turno(turno):
+        raise HTTPException(status_code=400, detail="No se pueden eliminar turnos asistidos")
+    
     eliminacion_exitosa = crud.delete_turno(db, turno_id)
     if not eliminacion_exitosa:
         raise HTTPException(status_code=404, detail="Turno no encontrado")
-    return {"ok": True, "mensaje": "Turno eliminado"}
+    return {"ok": True, "mensaje": "Turno eliminado"} """
