@@ -24,5 +24,11 @@ def turnos_disponibles(db: Session, fecha: date) -> List[str]:
     ).all()
     ocupados = [r[0] for r in ocupados_rows]
     disponibles = [h for h in horarios_totales if h not in ocupados]
-    return disponibles
+    return disponibles 
 
+def puede_modificar_turno(turno: models.Turno) -> bool:
+    estados_no_modificables = ["asistido", "cancelado"]
+    return turno.estado not in estados_no_modificables
+
+def puede_cancelar_turno(turno: models.Turno) -> bool: 
+   return turno.estado != "asistido"
