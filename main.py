@@ -241,16 +241,94 @@ def confirmar_turno(turno_id: int, db: Session = Depends(get_db)):
         dni=persona.dni
     )
 
-""" @app.delete("/turnos/{turno_id}")
-def eliminar_turno(turno_id: int, db: Session = Depends(get_db)):
-    turno = crud.get_turno(db, turno_id)
-    if not turno:
-        raise HTTPException(status_code=404, detail="Turno no encontrado")
-    
-    if not services.puede_eliminar_turno(turno):
-        raise HTTPException(status_code=400, detail="No se pueden eliminar turnos asistidos")
-    
-    eliminacion_exitosa = crud.delete_turno(db, turno_id)
-    if not eliminacion_exitosa:
-        raise HTTPException(status_code=404, detail="Turno no encontrado")
-    return {"ok": True, "mensaje": "Turno eliminado"} """
+@app.get("/reportes/turnos-cancelados")
+def reportes_turnos_cancelados(min: int = 5, db: Session = Depends(get_db)):
+  
+    turnos_cancelados = (
+        db.query(models.Turno)
+        .filter(models.Turno.estado == "cancelado")
+        .all()
+    )
+
+    personas_dict = {}
+    for turno in turnos_cancelados:
+        persona = crud.get_persona(db, turno.persona_id)
+        if not persona:
+            continue
+        if persona.id not in personas_dict:
+            personas_dict[persona.id] = {
+                "id": persona.id,
+                "nombre": persona.nombre,
+                "dni": persona.dni,
+                "email": persona.email,
+                "telefono": persona.telefono,
+                "cantidad_cancelados": 0,
+                "detalle_turnos_cancelados": []
+            }
+        personas_dict[persona.id]["cantidad_cancelados"] += 1
+        personas_dict[persona.id]["detalle_turnos_cancelados"].append({
+            "id": turno.id,
+            "fecha": turno.fecha,
+            "hora": turno.hora,
+            "estado": turno.estado
+        })
+
+    resultado = [
+        data for data in personas_dict.values()
+        if data["cantidad_cancelados"] >= min
+    ]
+
+    return resultado
+
+
+@app.get("/reportes/turnos-confirmados")
+def reportes_turnos_confirmados(desde: str, hasta: str, page: int = 1, db: Session = Depends(get_db)):
+
+    try:
+        fecha_desde = date.fromisoformat(desde)
+        fecha_hasta = date.fromisoformat(hasta)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD.")
+
+    if fecha_desde > fecha_hasta:
+        raise HTTPException(status_code=400, detail="La fecha 'desde' no puede ser mayor que 'hasta'.")
+
+    turnos_confirmados = (
+        db.query(models.Turno)
+        .filter(
+            models.Turno.estado == "confirmado",
+            models.Turno.fecha >= fecha_desde,
+            models.Turno.fecha <= fecha_hasta
+        )
+        .order_by(models.Turno.fecha)
+        .all()
+    )
+
+    por_pagina = 5
+    inicio = (page - 1) * por_pagina
+    fin = inicio + por_pagina
+    turnos_paginados = turnos_confirmados[inicio:fin]
+
+    resultados = []
+    for turno in turnos_paginados:
+        persona = crud.get_persona(db, turno.persona_id)
+        resultados.append({
+            "id": turno.id,
+            "fecha": turno.fecha,
+            "hora": turno.hora,
+            "estado": turno.estado,
+            "persona": {
+                "id": persona.id,
+                "nombre": persona.nombre,
+                "dni": persona.dni,
+                "email": persona.email
+            }
+        })
+
+    return {
+        "total": len(turnos_confirmados),
+        "pagina_actual": page,
+        "por_pagina": por_pagina,
+        "total_paginas": (len(turnos_confirmados) + por_pagina - 1) // por_pagina,
+        "resultados": resultados
+    }
