@@ -397,3 +397,26 @@ def reportes_turnos_confirmados_periodos(
         "total_paginas": total_paginas,
         "resultados": resultados
     }
+
+@app.get("/reportes/estado-personas")
+def reporte_estado_personas(db: Session = Depends(get_db)):
+    personas = crud.get_personas(db)
+    resultado = []
+
+    for persona in personas:
+        
+        puede_sacar = services.puede_sacar_turno(db, persona.id)
+        estado = "habilitado" if persona.habilitado and puede_sacar else "inhabilitado"
+
+        resultado.append({
+            "id": persona.id,
+            "nombre": persona.nombre,
+            "dni": persona.dni,
+            "email": persona.email,
+            "telefono": persona.telefono,
+            "habilitado": persona.habilitado,
+            "puede_sacar_turno": puede_sacar,
+            "estado_general": estado
+        })
+
+    return resultado
