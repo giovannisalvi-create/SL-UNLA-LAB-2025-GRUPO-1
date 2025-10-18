@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException ,Query
 from sqlalchemy.orm import Session
 from database import Base, engine, get_db
 import crud, schemas, models, services
@@ -240,6 +240,69 @@ def confirmar_turno(turno_id: int, db: Session = Depends(get_db)):
         persona_id=turno_actualizado.persona_id,
         dni=persona.dni
     )
+
+
+@app.get("/reportes/turnos-por-fecha")
+def turnos_por_fecha(fecha: date, db: Session = Depends(get_db)):
+    turnos = crud.get_turnos_por_fecha(db, fecha)
+    if not turnos:
+        raise HTTPException(status_code=404, detail="No hay turnos para esa fecha")
+    return [
+        {
+            "id": t.Turno.id,
+            "fecha": t.Turno.fecha,
+            "hora": t.Turno.hora,
+            "estado": t.Turno.estado,
+            "persona": {"nombre": t.nombre, "dni": t.dni},
+        }
+        for t in turnos
+    ]
+
+
+@app.get("/reportes/turnos-cancelados-por-mes")
+def turnos_cancelados_por_mes(
+    mes: int = Query(None, ge=1, le=12, description="Número del mes (1-12)"),
+    anio: int = Query(None, ge=2022, le=2026, description="Año (ej. 2025)"),
+    db: Session = Depends(get_db)
+):
+    hoy = date.today()
+    mes = mes or hoy.month
+    anio = anio or hoy.year
+
+    turnos = crud.get_turnos_cancelados_por_mes(db, anio, mes)
+    nombre_mes = services.nombre_mes(mes).capitalize()
+
+    return {
+        "anio": anio,
+        "mes": nombre_mes,
+        "cantidad": len(turnos),
+        "turnos": [
+            {
+                "id": t.id,
+                "persona_id": t.persona_id,
+                "fecha": t.fecha,
+                "hora": t.hora,
+                "estado": t.estado,
+            }
+            for t in turnos
+        ],
+    }
+
+
+@app.get("/reportes/turnos-por-persona")
+def turnos_por_persona(dni: str, db: Session = Depends(get_db)):
+    persona = crud.get_persona_por_dni(db, dni)
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona no encontrada")
+
+    turnos = crud.get_turnos_por_persona(db, persona.id)
+    return {
+        "persona": {"id": persona.id, "nombre": persona.nombre, "dni": persona.dni},
+        "turnos": [
+            {"id": t.id, "fecha": t.fecha, "hora": t.hora, "estado": t.estado}
+            for t in turnos
+        ],
+    }
 
 @app.get("/reportes/turnos-cancelados")
 def reportes_turnos_cancelados(min: int = 5, db: Session = Depends(get_db)):
