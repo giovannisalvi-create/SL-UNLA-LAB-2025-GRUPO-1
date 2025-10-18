@@ -32,3 +32,20 @@ def puede_modificar_turno(turno: models.Turno) -> bool:
 
 def puede_cancelar_turno(turno: models.Turno) -> bool: 
    return turno.estado != "asistido"
+
+def obtener_turnos_confirmados_periodos(db, desde: date, hasta: date):
+    if desde > hasta:
+        raise ValueError("La fecha inicial no puede ser posterior a la final")
+
+    turnos_confirmados = (
+        db.query(models.Turno)
+        .filter(
+            models.Turno.estado == "confirmado",
+            models.Turno.fecha >= desde,
+            models.Turno.fecha <= hasta
+        )
+        .order_by(models.Turno.fecha)
+        .all()
+    )
+
+    return turnos_confirmados

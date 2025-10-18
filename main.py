@@ -281,36 +281,38 @@ def reportes_turnos_cancelados(min: int = 5, db: Session = Depends(get_db)):
     return resultado
 
 
-@app.get("/reportes/turnos-confirmados")
-def reportes_turnos_confirmados(desde: str, hasta: str, page: int = 1, db: Session = Depends(get_db)):
+@app.get("/reportes/turnos-confirmados-periodos")
+def reportes_turnos_confirmados_periodos(
+    desde: str,
+    hasta: str,
+    pagina: int = 1,
+    por_pagina: int = 5,
+    db: Session = Depends(get_db)
+):
 
+    # Validar formato de fechas
     try:
         fecha_desde = date.fromisoformat(desde)
         fecha_hasta = date.fromisoformat(hasta)
     except Exception:
         raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD.")
 
-    if fecha_desde > fecha_hasta:
-        raise HTTPException(status_code=400, detail="La fecha 'desde' no puede ser mayor que 'hasta'.")
+    # Obtener lista de turnos confirmados usando services.py
+    try:
+        turnos_confirmados = services.obtener_turnos_confirmados_periodos(db, fecha_desde, fecha_hasta)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-    turnos_confirmados = (
-        db.query(models.Turno)
-        .filter(
-            models.Turno.estado == "confirmado",
-            models.Turno.fecha >= fecha_desde,
-            models.Turno.fecha <= fecha_hasta
-        )
-        .order_by(models.Turno.fecha)
-        .all()
-    )
-
-    por_pagina = 5
-    inicio = (page - 1) * por_pagina
+    # Paginación
+    total = len(turnos_confirmados)
+    total_paginas = (total + por_pagina - 1) // por_pagina
+    inicio = (pagina - 1) * por_pagina
     fin = inicio + por_pagina
-    turnos_paginados = turnos_confirmados[inicio:fin]
+    turnos_pagina = turnos_confirmados[inicio:fin]
 
+   
     resultados = []
-    for turno in turnos_paginados:
+    for turno in turnos_pagina:
         persona = crud.get_persona(db, turno.persona_id)
         resultados.append({
             "id": turno.id,
@@ -326,9 +328,9 @@ def reportes_turnos_confirmados(desde: str, hasta: str, page: int = 1, db: Sessi
         })
 
     return {
-        "total": len(turnos_confirmados),
-        "pagina_actual": page,
+        "total": total,
+        "pagina_actual": pagina,
         "por_pagina": por_pagina,
-        "total_paginas": (len(turnos_confirmados) + por_pagina - 1) // por_pagina,
+        "total_paginas": total_paginas,
         "resultados": resultados
     }
