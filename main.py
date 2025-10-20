@@ -7,19 +7,10 @@ from datetime import date
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="TP - API de Turnos")
 
-from fastapi import FastAPI, Depends, HTTPException ,Query
-from sqlalchemy.orm import Session
-from database import Base, engine, get_db
-import crud, schemas, models, services
-from datetime import date
-
-Base.metadata.create_all(bind=engine)
-app = FastAPI(title="TP - API de Turnos")
-
 @app.get("/", include_in_schema=False)
 def root():
     try:
-        return {"mensaje": "API de turnos funcionando. Ir a /docs para la documentación."}
+        return {"mensaje": "API funcionando. Ir a /docs para ver y probar los endpoints."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
