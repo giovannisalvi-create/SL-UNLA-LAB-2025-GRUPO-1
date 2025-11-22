@@ -91,10 +91,5 @@ def get_turnos_cancelados_por_mes(db: Session, anio: int, mes: int):
         .all()
     )
 
-    
-def get_persona_por_dni(db: Session, dni: str):
-    return db.query(models.Persona).filter(models.Persona.dni == dni).first()
-
 def get_turnos_por_persona(db: Session, persona_id: int):
     return db.query(models.Turno).filter(models.Turno.persona_id == persona_id).all()
-

@@ -26,12 +26,14 @@ def turnos_disponibles(db: Session, fecha: date) -> List[str]:
     disponibles = [h for h in horarios_totales if h not in ocupados]
     return disponibles 
 
-def puede_modificar_turno(turno: models.Turno) -> bool:
-    estados_no_modificables = ["asistido", "cancelado"]
-    return turno.estado not in estados_no_modificables
-
-def puede_cancelar_turno(turno: models.Turno) -> bool: 
-   return turno.estado != "asistido"
+def validar_estado_modificable(turno: models.Turno) -> str:
+    if turno.estado == "asistido":
+        return "asistido"
+    
+    if turno.estado == "cancelado":
+        return "cancelado"
+    
+    return None
 
 def obtener_turnos_confirmados_periodos(db, desde: date, hasta: date):
     if desde > hasta:
@@ -44,6 +46,7 @@ def obtener_turnos_confirmados_periodos(db, desde: date, hasta: date):
             models.Turno.fecha >= desde,
             models.Turno.fecha <= hasta
         )
+        #offset limit/size
         .order_by(models.Turno.fecha)
         .all()
     )

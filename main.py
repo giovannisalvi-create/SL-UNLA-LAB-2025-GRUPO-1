@@ -220,8 +220,7 @@ def actualizar_turno(turno_id: int, turno_up: schemas.TurnoUpdate, db: Session =
         turno_actualizado = crud.update_turno(db, turno_id, turno_up)
         if not turno_actualizado:
             raise HTTPException(status_code=500, detail="Turno no encontrado")
-        #t_con_persona = db.query(models.Turno).join(models.Persona).filter(models.Turno.id == turno_id).first()
-        #Usamos turno_actualizado en lugar de hacer una nueva consulta.
+
         return schemas.TurnoOut(
             id=turno_actualizado.id,
             fecha=turno_actualizado.fecha,
@@ -242,11 +241,13 @@ def cancelar_turno(turno_id: int, db: Session = Depends(get_db)):
         if not turno:
             raise HTTPException(status_code=404, detail="Turno no encontrado")
 
-        if not services.puede_cancelar_turno(turno):
-            raise HTTPException(status_code=400, detail="No se pueden cancelar turnos asistidos")
+        estado_invalido = services.validar_estado_modificable(turno)
 
-        if not services.puede_modificar_turno(turno):
-            raise HTTPException(status_code=400, detail="No se puede cancelar un turno cancelado")
+        if estado_invalido == "asistido":
+            raise HTTPException(status_code=400, detail="No se puede cancelar un turno que ya fue 'asistido'")
+        
+        if estado_invalido == "cancelado":
+            raise HTTPException(status_code=400, detail="El turno ya se encuentra 'cancelado'")
         
         #Actuliza solo el estado a cancelado (acá hacemos la eliminación lógica)
         turno_actualizado = crud.update_turno(db, turno_id, schemas.TurnoUpdate(estado="cancelado"))
@@ -274,8 +275,13 @@ def confirmar_turno(turno_id: int, db: Session = Depends(get_db)):
         if not turno:
             raise HTTPException(status_code=404, detail="Turno no encontrado")
         
-        if not services.puede_modificar_turno(turno):
-            raise HTTPException(status_code=400, detail="No se puede confirmar un turno asistido o cancelado")
+        estado_invalido = services.validar_estado_modificable(turno)
+        
+        if estado_invalido == "asistido":
+            raise HTTPException(status_code=400, detail="No se puede confirmar un turno que ya fue 'asistido'")
+            
+        if estado_invalido == "cancelado":
+            raise HTTPException(status_code=400, detail="No se puede confirmar un turno que está 'cancelado'")
         
         #Actualiza el estado solo a confirmado
         turno_actualizado = crud.update_turno(db, turno_id, schemas.TurnoUpdate(estado="confirmado"))
