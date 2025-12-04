@@ -3,6 +3,7 @@ from typing import List, Optional
 import models, schemas
 from datetime import date
 from sqlalchemy import func
+from config import settings
 
 def create_persona(db: Session, persona_in: schemas.PersonaCreate) -> models.Persona:
     persona_db = models.Persona(**persona_in.model_dump())
@@ -86,7 +87,8 @@ def get_turnos_cancelados_por_mes(db: Session, anio: int, mes: int):
         .filter(
             func.strftime("%Y", models.Turno.fecha) == str(anio),
             func.strftime("%m", models.Turno.fecha) == f"{mes:02d}",
-            models.Turno.estado == "cancelado",
+            #models.Turno.estado == "cancelado",
+            models.Turno.estado == settings.ESTADO_CANCELADO,
         )
         .all()
     )
