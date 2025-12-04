@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from database import Base, engine, get_db
 import crud, schemas, models, services
 from datetime import date
+from config import settings
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="TP - API de Turnos")
@@ -214,7 +215,7 @@ def actualizar_turno(turno_id: int, turno_up: schemas.TurnoUpdate, db: Session =
         
         #Validar que el turno se puede modificar
         if not services.puede_modificar_turno(turno_existente):
-            raise HTTPException(status_code=400, detail="No se puede modificar un turno asistido o cancelado")
+            raise HTTPException(status_code=400, detail=f"No se puede modificar un turno {settings.ESTADO_ASISTIDO} o {settings.ESTADO_CANCELADO}")
         
         
         turno_actualizado = crud.update_turno(db, turno_id, turno_up)
@@ -243,14 +244,13 @@ def cancelar_turno(turno_id: int, db: Session = Depends(get_db)):
 
         estado_invalido = services.validar_estado_modificable(turno)
 
-        if estado_invalido == "asistido":
-            raise HTTPException(status_code=400, detail="No se puede cancelar un turno que ya fue 'asistido'")
+        if estado_invalido == settings.ESTADO_ASISTIDO:
+            raise HTTPException(status_code=400, detail=f"No se puede cancelar un turno que ya fue '{settings.ESTADO_ASISTIDO}'")
         
-        if estado_invalido == "cancelado":
-            raise HTTPException(status_code=400, detail="El turno ya se encuentra 'cancelado'")
+        if estado_invalido == settings.ESTADO_CANCELADO:
+            raise HTTPException(status_code=400, detail=f"El turno ya se encuentra '{settings.ESTADO_CANCELADO}'")
         
-        #Actuliza solo el estado a cancelado (acá hacemos la eliminación lógica)
-        turno_actualizado = crud.update_turno(db, turno_id, schemas.TurnoUpdate(estado="cancelado"))
+        turno_actualizado = crud.update_turno(db, turno_id, schemas.TurnoUpdate(estado=settings.ESTADO_CANCELADO))
         if not turno_actualizado:
             raise HTTPException(status_code=500, detail="Error al actualizar turno")
         
@@ -277,14 +277,13 @@ def confirmar_turno(turno_id: int, db: Session = Depends(get_db)):
         
         estado_invalido = services.validar_estado_modificable(turno)
         
-        if estado_invalido == "asistido":
-            raise HTTPException(status_code=400, detail="No se puede confirmar un turno que ya fue 'asistido'")
+        if estado_invalido == settings.ESTADO_ASISTIDO:
+            raise HTTPException(status_code=400, detail=f"No se puede confirmar un turno que ya fue '{settings.ESTADO_ASISTIDO}'")
             
-        if estado_invalido == "cancelado":
-            raise HTTPException(status_code=400, detail="No se puede confirmar un turno que está 'cancelado'")
+        if estado_invalido == settings.ESTADO_CANCELADO:
+            raise HTTPException(status_code=400, detail=f"No se puede confirmar un turno que está '{settings.ESTADO_CANCELADO}'")
         
-        #Actualiza el estado solo a confirmado
-        turno_actualizado = crud.update_turno(db, turno_id, schemas.TurnoUpdate(estado="confirmado"))
+        turno_actualizado = crud.update_turno(db, turno_id, schemas.TurnoUpdate(estado=settings.ESTADO_CONFIRMADO))
         
         if not turno_actualizado:
             raise HTTPException(status_code=500, detail="Error al actualizar el turno")
@@ -381,7 +380,7 @@ def reportes_turnos_cancelados(min: int = 5, db: Session = Depends(get_db)):
     try:
         turnos_cancelados = (
             db.query(models.Turno)
-            .filter(models.Turno.estado == "cancelado")
+            .filter(models.Turno.estado == settings.ESTADO_CANCELADO)
             .all()
         )
 
