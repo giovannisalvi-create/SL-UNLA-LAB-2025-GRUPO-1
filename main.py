@@ -4,6 +4,8 @@ from database import Base, engine, get_db
 import crud, schemas, models, services
 from datetime import date
 from config import settings
+from fastapi.responses import Response, StreamingResponse
+import asyncio
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="TP - API de Turnos")
@@ -214,8 +216,9 @@ def actualizar_turno(turno_id: int, turno_up: schemas.TurnoUpdate, db: Session =
             raise HTTPException(status_code=400, detail="Turno no encontrado")
         
         #Validar que el turno se puede modificar
-        if not services.puede_modificar_turno(turno_existente):
-            raise HTTPException(status_code=400, detail=f"No se puede modificar un turno {settings.ESTADO_ASISTIDO} o {settings.ESTADO_CANCELADO}")
+        estado_invalido = services.validar_estado_modificable(turno_existente)
+        if estado_invalido:
+            raise HTTPException(status_code=400, detail=f"No se puede modificar un turno que ya está '{estado_invalido}'")
         
         
         turno_actualizado = crud.update_turno(db, turno_id, turno_up)
@@ -499,3 +502,67 @@ def reporte_estado_personas(db: Session = Depends(get_db)):
         return resultado
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
+    
+#Reportes PDF - CSV
+@app.get("/reportes/csv/turnos-por-fecha")
+def reporte_csv_turnos_fecha(fecha: date, db: Session = Depends(get_db)):
+    try:
+        # Reutilizamos la query existente en crud
+        turnos = crud.get_turnos_por_fecha(db, fecha)
+        if not turnos:
+            raise HTTPException(status_code=404, detail="No hay turnos para esa fecha")
+        
+        # Generamos el CSV usando services
+        csv_buffer = services.generar_csv_turnos_fecha(turnos)
+        
+        # Devolvemos StreamingResponse para descargar el archivo
+        response = StreamingResponse(iter([csv_buffer.getvalue()]), media_type="text/csv")
+        response.headers["Content-Disposition"] = f"attachment; filename=turnos_{fecha}.csv"
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando CSV: {str(e)}")
+
+@app.get("/reportes/pdf/turnos-por-fecha")
+async def reporte_pdf_turnos_fecha(fecha: date, db: Session = Depends(get_db)):
+    try:
+        turnos = crud.get_turnos_por_fecha(db, fecha)
+        if not turnos:
+            raise HTTPException(status_code=404, detail="No hay turnos para esa fecha")
+        
+        #pdf_buffer = services.generar_pdf_turnos_fecha(turnos, fecha)
+        pdf_buffer = await asyncio.to_thread(services.generar_pdf_turnos_fecha, turnos, fecha)
+        
+        # Para PDF usamos Response con content type application/pdf
+        headers = {'Content-Disposition': f'attachment; filename="turnos_{fecha}.pdf"'}
+        return Response(content=pdf_buffer.getvalue(), headers=headers, media_type='application/pdf')
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
+
+@app.get("/reportes/pdf/turnos-cancelados-por-mes")
+async def reporte_pdf_turnos_cancelados_mes(
+    mes: int = Query(None, ge=1, le=12),
+    anio: int = Query(None, ge=2022, le=2026),
+    db: Session = Depends(get_db)
+):
+    try:
+        hoy = date.today()
+        mes = mes or hoy.month
+        anio = anio or hoy.year
+
+        turnos = crud.get_turnos_cancelados_por_mes(db, anio, mes)
+        nombre_mes = services.nombre_mes(mes).capitalize()
+
+        #pdf_buffer = services.generar_pdf_cancelados_mes(turnos, nombre_mes, anio)
+        pdf_buffer = await asyncio.to_thread(services.generar_pdf_cancelados_mes, turnos, nombre_mes, anio)
+
+        headers = {'Content-Disposition': f'attachment; filename="cancelados_{nombre_mes}_{anio}.pdf"'}
+        return Response(content=pdf_buffer.getvalue(), headers=headers, media_type='application/pdf')
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
