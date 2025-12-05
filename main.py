@@ -309,18 +309,30 @@ def confirmar_turno(turno_id: int, db: Session = Depends(get_db)):
 def turnos_por_fecha(fecha: date, db: Session = Depends(get_db)):
     try:
         turnos = crud.get_turnos_por_fecha(db, fecha)
+
         if not turnos:
             raise HTTPException(status_code=404, detail="No hay turnos para esa fecha")
-        return [
-            {
-                "id": t.Turno.id,
-                "fecha": t.Turno.fecha,
-                "hora": t.Turno.hora,
-                "estado": t.Turno.estado,
-                "persona": {"nombre": t.nombre, "dni": t.dni},
-            }
-            for t in turnos
-        ]
+
+        resultado = {}
+
+        for turno, nombre, dni in turnos:
+
+            if dni not in resultado:
+                resultado[dni] = {
+                    "nombre": nombre,
+                    "dni": dni,
+                    "turnos": []
+                }
+
+            resultado[dni]["turnos"].append({
+                "id": turno.id,
+                "fecha": turno.fecha,
+                "hora": turno.hora,
+                "estado": turno.estado
+            })
+
+        return list(resultado.values())
+
     except HTTPException:
         raise
     except Exception as e:
@@ -359,24 +371,46 @@ def turnos_cancelados_por_mes(
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 @app.get("/reportes/turnos-por-persona")
-def turnos_por_persona(dni: str, db: Session = Depends(get_db)):
+def turnos_por_persona(
+    dni: str,
+    page: int = Query(1, ge=1),
+    size: int = Query(5, ge=1, le=20),
+    db: Session = Depends(get_db)
+):
     try:
         persona = crud.get_persona_por_dni(db, dni)
         if not persona:
             raise HTTPException(status_code=404, detail="Persona no encontrada")
 
-        turnos = crud.get_turnos_por_persona(db, persona.id)
+        skip = (page - 1) * size
+
+        turnos = crud.get_turnos_por_persona(db, persona.id, skip=skip, limit=size)
+
+        total_turnos = db.query(models.Turno).filter(
+            models.Turno.persona_id == persona.id
+        ).count()
+
         return {
-            "persona": {"id": persona.id, "nombre": persona.nombre, "dni": persona.dni},
+            "persona": {
+                "id": persona.id,
+                "nombre": persona.nombre,
+                "dni": persona.dni
+            },
+            "pagina": page,
+            "tamanio": size,
+            "total": total_turnos,
+            "total_paginas": (total_turnos + size - 1) // size,
             "turnos": [
                 {"id": t.id, "fecha": t.fecha, "hora": t.hora, "estado": t.estado}
                 for t in turnos
             ],
         }
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
+
 
 @app.get("/reportes/turnos-cancelados")
 def reportes_turnos_cancelados(min: int = 5, db: Session = Depends(get_db)):
