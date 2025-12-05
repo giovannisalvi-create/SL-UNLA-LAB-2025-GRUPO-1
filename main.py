@@ -4,8 +4,9 @@ from database import Base, engine, get_db
 import crud, schemas, models, services
 from datetime import date
 from config import settings
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response, StreamingResponse, FileResponse
 import asyncio
+import pandas as pd
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="TP - API de Turnos")
@@ -384,7 +385,9 @@ def turnos_por_persona(
 
         skip = (page - 1) * size
 
-        turnos = crud.get_turnos_por_persona(db, persona.id, skip=skip, limit=size)
+        turnos_paginados = crud.get_turnos_por_persona_paginado(
+            db, persona.id, skip=skip, limit=size
+        )
 
         total_turnos = db.query(models.Turno).filter(
             models.Turno.persona_id == persona.id
@@ -401,8 +404,13 @@ def turnos_por_persona(
             "total": total_turnos,
             "total_paginas": (total_turnos + size - 1) // size,
             "turnos": [
-                {"id": t.id, "fecha": t.fecha, "hora": t.hora, "estado": t.estado}
-                for t in turnos
+                {
+                    "id": t.Turno.id,
+                    "fecha": t.Turno.fecha,
+                    "hora": t.Turno.hora,
+                    "estado": t.Turno.estado,
+                }
+                for t in turnos_paginados
             ],
         }
 
@@ -410,7 +418,6 @@ def turnos_por_persona(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
-
 
 @app.get("/reportes/turnos-cancelados")
 def reportes_turnos_cancelados(min: int = 5, page: int = 1, db: Session = Depends(get_db)):
@@ -644,3 +651,96 @@ async def reporte_pdf_turnos_cancelados_mes(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
+
+@app.get("/reportes/csv/turnos-cancelados-por-mes")
+def turnos_cancelados_por_mes_csv(
+    mes: int = Query(None, ge=1, le=12, description="Número del mes (1-12)"),
+    anio: int = Query(None, ge=2022, le=2026, description="Año (ej. 2025)"),
+    db: Session = Depends(get_db)
+):
+    try:
+        hoy = date.today()
+        mes = mes or hoy.month
+        anio = anio or hoy.year
+
+        # Obtener turnos
+        turnos = crud.get_turnos_cancelados_por_mes(db, anio, mes)
+        nombre_mes_str = services.nombre_mes(mes).capitalize()
+
+        # Generar CSV
+        csv_buffer = services.generar_csv_turnos_cancelados_mes(turnos, nombre_mes_str, anio)
+
+        # Devolver CSV como streaming
+        filename = f"turnos_cancelados_{nombre_mes_str}_{anio}.csv"
+        return Response(
+            content=csv_buffer.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando CSV: {str(e)}")
+    
+
+@app.get("/reportes/pdf/turnos-por-persona")
+def turnos_por_persona_pdf(
+    dni: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        # Busca persona
+        persona = crud.get_persona_por_dni(db, dni)
+        if not persona:
+            raise HTTPException(status_code=404, detail="Persona no encontrada")
+
+        # Busca turnos
+        turnos = crud.get_turnos_por_persona_simple(db, persona.id)
+
+        # Genera PDF con service
+        pdf_buffer = services.generar_pdf_turnos_persona(turnos, persona)
+
+        # Respuesta HTTP con archivo descargable
+        return Response(
+            content=pdf_buffer.getvalue(),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=turnos_{persona.dni}.pdf"
+            }
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando PDF: {str(e)}"
+        )
+
+
+@app.get("/reportes/csv/turnos-por-persona")
+def turnos_por_persona_csv(dni: str, db: Session = Depends(get_db)):
+    try:
+        persona = crud.get_persona_por_dni(db, dni)
+        if not persona:
+            raise HTTPException(status_code=404, detail="Persona no encontrada")
+
+        # CSV usa la función SIN paginación
+        turnos = crud.get_turnos_por_persona_simple(db, persona.id)
+        if not turnos:
+            raise HTTPException(status_code=404, detail="No hay turnos para esta persona")
+
+        csv_buffer = services.generar_csv_turnos_persona(turnos,persona)
+
+        response = StreamingResponse(
+            iter([csv_buffer.getvalue()]),
+            media_type="text/csv"
+        )
+        response.headers["Content-Disposition"] = f"attachment; filename=turnos_persona_{dni}.csv"
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando CSV: {str(e)}")
+
