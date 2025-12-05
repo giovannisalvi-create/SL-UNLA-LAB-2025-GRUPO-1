@@ -95,9 +95,10 @@ def get_turnos_cancelados_por_mes(db: Session, anio: int, mes: int):
 def get_persona_por_dni(db: Session, dni: str):
     return db.query(models.Persona).filter(models.Persona.dni == dni).first()
 
-def get_turnos_por_persona(db: Session, persona_id: int, skip: int = 0, limit: int = 10):
+def get_turnos_por_persona_paginado(db: Session, persona_id: int, skip: int = 0, limit: int = 10):
     return (
-        db.query(models.Turno)
+        db.query(models.Turno, models.Persona.nombre, models.Persona.dni)
+        .join(models.Persona, models.Turno.persona_id == models.Persona.id)
         .filter(models.Turno.persona_id == persona_id)
         .order_by(models.Turno.fecha, models.Turno.hora)
         .offset(skip)
@@ -105,5 +106,11 @@ def get_turnos_por_persona(db: Session, persona_id: int, skip: int = 0, limit: i
         .all()
     )
 
+def get_turnos_por_persona_simple(db: Session, persona_id: int):
+    return (
+        db.query(models.Turno)
+        .filter(models.Turno.persona_id == persona_id)
+        .all()
+    )
 
 
