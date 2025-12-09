@@ -744,3 +744,94 @@ def turnos_por_persona_csv(dni: str, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generando CSV: {str(e)}")
 
+@app.get("/reportes/turnos-cancelados/pdf")
+async def reporte_pdf_turnos_cancelados(db: Session = Depends(get_db)):
+    try:
+        turnos = (
+            db.query(models.Turno)
+            .filter(models.Turno.estado == settings.ESTADO_CANCELADO)
+            .all()
+        )
+
+        pdf_buffer = await asyncio.to_thread(
+            services.generar_pdf_turnos_cancelados,
+            turnos
+        )
+
+        headers = {"Content-Disposition": 'attachment; filename="turnos_cancelados.pdf"'}
+        return Response(
+            content=pdf_buffer.getvalue(),
+            headers=headers,
+            media_type="application/pdf"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando PDF: {str(e)}"
+        )
+    
+@app.get("/reportes/turnos-cancelados/csv")
+def reporte_csv_turnos_cancelados(db: Session = Depends(get_db)):
+    try:
+        turnos = (
+            db.query(models.Turno)
+            .filter(models.Turno.estado == settings.ESTADO_CANCELADO)
+            .all()
+        )
+
+        if not turnos:
+            raise HTTPException(status_code=404, detail="No hay turnos cancelados")
+
+        csv_buffer = services.generar_csv_turnos_cancelados(turnos)
+
+        response = StreamingResponse(
+            iter([csv_buffer.getvalue()]),
+            media_type="text/csv"
+        )
+        response.headers["Content-Disposition"] = "attachment; filename=turnos_cancelados.csv"
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando CSV: {str(e)}"
+        )    
+    
+@app.get("/reportes/estado-personas/pdf")
+async def reporte_pdf_estado_personas(db: Session = Depends(get_db)):
+    try:
+        personas = crud.get_personas(db)
+        resultado = []
+
+        for persona in personas:
+            puede_sacar = services.puede_sacar_turno(db, persona.id)
+            estado = "habilitado" if persona.habilitado and puede_sacar else "inhabilitado"
+
+            resultado.append({
+                "id": persona.id,
+                "nombre": persona.nombre,
+                "dni": persona.dni,
+                "email": persona.email,
+                "estado_general": estado
+            })
+
+        pdf_buffer = await asyncio.to_thread(
+            services.generar_pdf_estado_personas,
+            resultado
+        )
+
+        headers = {"Content-Disposition": 'attachment; filename="estado_personas.pdf"'}
+        return Response(
+            content=pdf_buffer.getvalue(),
+            headers=headers,
+            media_type="application/pdf"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando PDF: {str(e)}"
+        )    
