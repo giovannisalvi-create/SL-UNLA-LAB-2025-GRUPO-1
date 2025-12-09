@@ -230,3 +230,90 @@ def generar_pdf_turnos_persona(turnos, persona):
     PDF.dumps(buffer, doc)
     buffer.seek(0)
     return buffer
+
+def generar_csv_turnos_cancelados(turnos: list) -> io.StringIO:
+    data_list = []
+
+    for t in turnos:
+        data_list.append({
+            "ID Turno": t.id,
+            "Fecha": t.fecha,
+            "Hora": t.hora,
+            "Estado": t.estado,
+            "Persona ID": t.persona_id
+        })
+
+    df = pd.DataFrame(data_list)
+
+    stream = io.StringIO()
+    df.to_csv(stream, index=False, sep=";")
+    return stream
+
+def generar_pdf_turnos_cancelados(turnos: list) -> io.BytesIO:
+    pdf_buffer = io.BytesIO()
+    doc = Document()
+    page = Page()
+    doc.add_page(page)
+    layout = SingleColumnLayout(page)
+
+    layout.add(Paragraph("Reporte de Turnos Cancelados", font_size=Decimal(14)))
+    layout.add(Paragraph(f"Total de turnos cancelados: {len(turnos)}", font_size=Decimal(10)))
+
+    if turnos:
+        table = FixedColumnWidthTable(
+            number_of_rows=len(turnos) + 1,
+            number_of_columns=4
+        )
+
+        for h in ["ID", "Fecha", "Hora", "Persona ID"]:
+            table.add(TableCell(Paragraph(h, font="Helvetica-Bold")))
+
+        for t in turnos:
+            table.add(TableCell(Paragraph(str(t.id))))
+            table.add(TableCell(Paragraph(str(t.fecha))))
+            table.add(TableCell(Paragraph(str(t.hora))))
+            table.add(TableCell(Paragraph(str(t.persona_id))))
+
+        layout.add(table)
+    else:
+        layout.add(Paragraph("No hay turnos cancelados."))
+
+    PDF.dumps(pdf_buffer, doc)
+    pdf_buffer.seek(0)
+    return pdf_buffer
+
+def generar_pdf_estado_personas(personas_data: list) -> io.BytesIO:
+    pdf_buffer = io.BytesIO()
+    doc = Document()
+    page = Page()
+    doc.add_page(page)
+    layout = SingleColumnLayout(page)
+
+    layout.add(Paragraph("Reporte Estado de Personas", font_size=Decimal(14)))
+
+    table = FixedColumnWidthTable(
+        number_of_rows=len(personas_data) + 1,
+        number_of_columns=5
+    )
+
+    for h in ["ID", "Nombre", "DNI", "Email", "Estado"]:
+        table.add(TableCell(Paragraph(h, font="Helvetica-Bold")))
+
+    def partir_texto(texto: str, largo: int = 12) -> str:
+        return "\n".join(
+            texto[i:i+largo] for i in range(0, len(texto), largo)
+        )
+
+    for p in personas_data:
+        table.add(TableCell(Paragraph(str(p["id"]))))
+        table.add(TableCell(Paragraph(p["nombre"])))
+        table.add(TableCell(Paragraph(p["dni"])))
+        table.add(TableCell(Paragraph(partir_texto(p["email"]))))
+        table.add(TableCell(Paragraph(p["estado_general"])))
+
+    layout.add(table)
+
+    PDF.dumps(pdf_buffer, doc)
+    pdf_buffer.seek(0)
+    return pdf_buffer
+
