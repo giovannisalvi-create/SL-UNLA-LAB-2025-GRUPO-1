@@ -854,3 +854,191 @@ async def reporte_pdf_estado_personas(db: Session = Depends(get_db)):
             status_code=500,
             detail=f"Error generando PDF: {str(e)}"
         )    
+    
+ @app.get("/reportes/estado-personas/csv")
+def reporte_csv_estado_personas(
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(5, ge=1),
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint para descargar reporte de estado de personas en formato CSV
+    """
+    try:
+        # Reutilizamos la misma lógica del endpoint /reportes/estado-personas
+        personas = crud.get_personas(db)
+        total = len(personas)
+        
+        total_paginas = (total + por_pagina - 1) // por_pagina
+        inicio = (pagina - 1) * por_pagina
+        fin = inicio + por_pagina
+        personas_pagina = personas[inicio:fin]
+        
+        resultado = []
+        for persona in personas_pagina:
+            puede_sacar = services.puede_sacar_turno(db, persona.id)
+            estado = "habilitado" if persona.habilitado and puede_sacar else "inhabilitado"
+            
+            resultado.append({
+                "id": persona.id,
+                "nombre": persona.nombre,
+                "dni": persona.dni,
+                "email": persona.email,
+                "telefono": persona.telefono,
+                "habilitado": persona.habilitado,
+                "puede_sacar_turno": puede_sacar,
+                "estado_general": estado
+            })
+        
+        # Generar CSV usando la nueva función
+        csv_buffer = services.generar_csv_estado_personas(resultado, pagina, total_paginas)
+        
+        response = StreamingResponse(
+            iter([csv_buffer.getvalue()]),
+            media_type="text/csv"
+        )
+        response.headers["Content-Disposition"] = f"attachment; filename=estado_personas_pagina_{pagina}.csv"
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando CSV: {str(e)}"
+        )
+
+
+@app.get("/reportes/turnos-confirmados-periodos/pdf")
+async def reporte_pdf_turnos_confirmados_periodos(
+    desde: str,
+    hasta: str,
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(5, ge=1),
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint para descargar reporte de turnos confirmados en formato PDF
+    """
+    try:
+        # Validar formato de fechas (misma lógica que el endpoint JSON)
+        try:
+            fecha_desde = date.fromisoformat(desde)
+            fecha_hasta = date.fromisoformat(hasta)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD.")
+        
+        # Obtener turnos confirmados (misma lógica que el endpoint JSON)
+        try:
+            turnos_confirmados = services.obtener_turnos_confirmados_periodos(db, fecha_desde, fecha_hasta)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        
+        # Paginación (misma lógica que el endpoint JSON)
+        total = len(turnos_confirmados)
+        total_paginas = (total + por_pagina - 1) // por_pagina
+        inicio = (pagina - 1) * por_pagina
+        fin = inicio + por_pagina
+        turnos_pagina = turnos_confirmados[inicio:fin]
+        
+        # Preparar datos para el PDF (similar al endpoint JSON)
+        resultados = []
+        for turno in turnos_pagina:
+            persona = crud.get_persona(db, turno.persona_id)
+            resultados.append({
+                "id": turno.id,
+                "fecha": turno.fecha,
+                "hora": turno.hora,
+                "estado": turno.estado,
+                "persona_id": turno.persona_id,
+                "nombre_persona": persona.nombre,
+                "dni_persona": persona.dni,
+                "email_persona": persona.email
+            })
+        
+        # Generar PDF usando la nueva función
+        pdf_buffer = await asyncio.to_thread(
+            services.generar_pdf_turnos_confirmados_periodos,
+            resultados, fecha_desde, fecha_hasta, pagina, total_paginas, total
+        )
+        
+        headers = {
+            "Content-Disposition": f'attachment; filename="turnos_confirmados_{desde}_a_{hasta}_pagina_{pagina}.pdf"'
+        }
+        return Response(
+            content=pdf_buffer.getvalue(),
+            headers=headers,
+            media_type="application/pdf"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
+
+
+@app.get("/reportes/turnos-confirmados-periodos/csv")
+def reporte_csv_turnos_confirmados_periodos(
+    desde: str,
+    hasta: str,
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(5, ge=1),
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint para descargar reporte de turnos confirmados en formato CSV
+    """
+    try:
+        # Validar formato de fechas (misma lógica que el endpoint JSON)
+        try:
+            fecha_desde = date.fromisoformat(desde)
+            fecha_hasta = date.fromisoformat(hasta)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD.")
+        
+        # Obtener turnos confirmados (misma lógica que el endpoint JSON)
+        try:
+            turnos_confirmados = services.obtener_turnos_confirmados_periodos(db, fecha_desde, fecha_hasta)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        
+        # Paginación (misma lógica que el endpoint JSON)
+        total = len(turnos_confirmados)
+        total_paginas = (total + por_pagina - 1) // por_pagina
+        inicio = (pagina - 1) * por_pagina
+        fin = inicio + por_pagina
+        turnos_pagina = turnos_confirmados[inicio:fin]
+        
+        # Preparar datos para el CSV (similar al endpoint JSON)
+        resultados = []
+        for turno in turnos_pagina:
+            persona = crud.get_persona(db, turno.persona_id)
+            resultados.append({
+                "id": turno.id,
+                "fecha": turno.fecha,
+                "hora": turno.hora,
+                "estado": turno.estado,
+                "persona_id": turno.persona_id,
+                "nombre_persona": persona.nombre,
+                "dni_persona": persona.dni,
+                "email_persona": persona.email
+            })
+        
+        # Generar CSV usando la nueva función
+        csv_buffer = services.generar_csv_turnos_confirmados_periodos(
+            resultados, fecha_desde, fecha_hasta, pagina, total_paginas, total
+        )
+        
+        response = StreamingResponse(
+            iter([csv_buffer.getvalue()]),
+            media_type="text/csv"
+        )
+        response.headers["Content-Disposition"] = (
+            f"attachment; filename=turnos_confirmados_{desde}_a_{hasta}_pagina_{pagina}.csv"
+        )
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando CSV: {str(e)}")

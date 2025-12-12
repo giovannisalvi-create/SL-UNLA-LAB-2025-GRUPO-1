@@ -318,3 +318,119 @@ def generar_pdf_estado_personas(personas_data: list) -> io.BytesIO:
     pdf_buffer.seek(0)
     return pdf_buffer
 
+def generar_csv_estado_personas(resultado: list, pagina: int, total_paginas: int) -> io.StringIO:
+    """
+    Genera un archivo CSV con el estado de las personas
+    """
+    buffer = io.StringIO()
+    
+    # Crear DataFrame con los datos
+    data = []
+    for persona in resultado:
+        data.append({
+            "ID": persona["id"],
+            "Nombre": persona["nombre"],
+            "DNI": persona["dni"],
+            "Email": persona["email"],
+            "Telefono": persona["telefono"],
+            "Habilitado": "Sí" if persona["habilitado"] else "No",
+            "Puede sacar turno": "Sí" if persona["puede_sacar_turno"] else "No",
+            "Estado General": persona["estado_general"]
+        })
+    
+    df = pd.DataFrame(data)
+    
+    # Agregar información de paginación como comentario al inicio del CSV
+    header_info = f"# Reporte de Estado de Personas - Página {pagina} de {total_paginas}\n"
+    header_info += f"# Total de registros en esta página: {len(resultado)}\n"
+    header_info += f"# Fecha de generación: {date.today()}\n\n"
+    
+    buffer.write(header_info)
+    df.to_csv(buffer, index=False, sep=";")
+    
+    buffer.seek(0)
+    return buffer
+
+
+def generar_pdf_turnos_confirmados_periodos(resultados: list, desde: date, hasta: date, 
+                                          pagina: int, total_paginas: int, total: int) -> io.BytesIO:
+    """
+    Genera un PDF con los turnos confirmados en un período específico
+    """
+    pdf_buffer = io.BytesIO()
+    doc = Document()
+    page = Page()
+    doc.add_page(page)
+    layout = SingleColumnLayout(page)
+    
+    # Título
+    layout.add(Paragraph(f"Reporte de Turnos Confirmados", font_size=Decimal(16)))
+    layout.add(Paragraph(f"Período: {desde} a {hasta}", font_size=Decimal(12)))
+    layout.add(Paragraph(f"Página {pagina} de {total_paginas} - Total de turnos: {total}", font_size=Decimal(10)))
+    layout.add(Paragraph(f"Fecha de generación: {date.today()}", font_size=Decimal(10)))
+    
+    if resultados:
+        # Tabla de turnos
+        table = FixedColumnWidthTable(
+            number_of_rows=len(resultados) + 1,
+            number_of_columns=7
+        )
+        
+        # Encabezados
+        headers = ["ID Turno", "Fecha", "Hora", "Estado", "Nombre", "DNI", "Email"]
+        for h in headers:
+            table.add(TableCell(Paragraph(h, font="Helvetica-Bold")))
+        
+        # Filas de datos
+        for item in resultados:
+            table.add(TableCell(Paragraph(str(item["id"]))))
+            table.add(TableCell(Paragraph(str(item["fecha"]))))
+            table.add(TableCell(Paragraph(str(item["hora"]))))
+            table.add(TableCell(Paragraph(str(item["estado"]))))
+            table.add(TableCell(Paragraph(str(item["nombre_persona"]))))
+            table.add(TableCell(Paragraph(str(item["dni_persona"]))))
+            table.add(TableCell(Paragraph(str(item["email_persona"]))))
+        
+        layout.add(table)
+    else:
+        layout.add(Paragraph("No hay turnos confirmados en este período."))
+    
+    PDF.dumps(pdf_buffer, doc)
+    pdf_buffer.seek(0)
+    return pdf_buffer
+
+
+def generar_csv_turnos_confirmados_periodos(resultados: list, desde: date, hasta: date,
+                                          pagina: int, total_paginas: int, total: int) -> io.StringIO:
+    """
+    Genera un CSV con los turnos confirmados en un período específico
+    """
+    buffer = io.StringIO()
+    
+    # Encabezado informativo
+    header_info = f"# Reporte de Turnos Confirmados\n"
+    header_info += f"# Período: {desde} a {hasta}\n"
+    header_info += f"# Página {pagina} de {total_paginas} - Total de turnos: {total}\n"
+    header_info += f"# Fecha de generación: {date.today()}\n\n"
+    
+    buffer.write(header_info)
+    
+    # Crear DataFrame
+    data = []
+    for item in resultados:
+        data.append({
+            "ID Turno": item["id"],
+            "Fecha": item["fecha"],
+            "Hora": item["hora"],
+            "Estado": item["estado"],
+            "Persona ID": item["persona_id"],
+            "Nombre": item["nombre_persona"],
+            "DNI": item["dni_persona"],
+            "Email": item["email_persona"]
+        })
+    
+    df = pd.DataFrame(data)
+    df.to_csv(buffer, index=False, sep=";")
+    
+    buffer.seek(0)
+    return buffer
