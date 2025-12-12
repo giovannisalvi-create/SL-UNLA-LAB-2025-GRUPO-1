@@ -420,19 +420,20 @@ def turnos_por_persona(
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 @app.get("/reportes/turnos-cancelados")
-def reportes_turnos_cancelados(min: int = 5, db: Session = Depends(get_db)):
+def reportes_turnos_cancelados(min: int = 5, page: int = 1, db: Session = Depends(get_db)):
     try:
+        
         turnos_cancelados = (
             db.query(models.Turno)
             .filter(models.Turno.estado == settings.ESTADO_CANCELADO)
+            .order_by(models.Turno.fecha)
             .all()
         )
 
         personas_dict = {}
         for turno in turnos_cancelados:
             persona = crud.get_persona(db, turno.persona_id)
-            if not persona:
-                continue
+
             if persona.id not in personas_dict:
                 personas_dict[persona.id] = {
                     "id": persona.id,
@@ -443,6 +444,7 @@ def reportes_turnos_cancelados(min: int = 5, db: Session = Depends(get_db)):
                     "cantidad_cancelados": 0,
                     "detalle_turnos_cancelados": []
                 }
+
             personas_dict[persona.id]["cantidad_cancelados"] += 1
             personas_dict[persona.id]["detalle_turnos_cancelados"].append({
                 "id": turno.id,
@@ -456,9 +458,29 @@ def reportes_turnos_cancelados(min: int = 5, db: Session = Depends(get_db)):
             if data["cantidad_cancelados"] >= min
         ]
 
-        return resultado
+        por_pagina = 5
+        total = len(resultado)
+        total_paginas = (total + por_pagina - 1) // por_pagina
+
+        inicio = (page - 1) * por_pagina
+        fin = inicio + por_pagina
+        resultados_paginados = resultado[inicio:fin]
+
+        return {
+            "total": total,
+            "pagina_actual": page,
+            "por_pagina": por_pagina,
+            "total_paginas": total_paginas,
+            "resultados": resultados_paginados
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error interno del servidor: {str(e)}"
+        )
 
 @app.get("/reportes/turnos-confirmados-periodos")
 def reportes_turnos_confirmados_periodos(
@@ -517,15 +539,25 @@ def reportes_turnos_confirmados_periodos(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
-
+    
 @app.get("/reportes/estado-personas")
-def reporte_estado_personas(db: Session = Depends(get_db)):
+def reporte_estado_personas(
+    pagina: int = 1,
+    por_pagina: int = 5,
+    db: Session = Depends(get_db)
+):
     try:
+        
         personas = crud.get_personas(db)
-        resultado = []
+        total = len(personas)
 
-        for persona in personas:
-            
+        total_paginas = (total + por_pagina - 1) // por_pagina
+        inicio = (pagina - 1) * por_pagina
+        fin = inicio + por_pagina
+        personas_pagina = personas[inicio:fin]
+
+        resultado = []
+        for persona in personas_pagina:
             puede_sacar = services.puede_sacar_turno(db, persona.id)
             estado = "habilitado" if persona.habilitado and puede_sacar else "inhabilitado"
 
@@ -540,9 +572,21 @@ def reporte_estado_personas(db: Session = Depends(get_db)):
                 "estado_general": estado
             })
 
-        return resultado
+        return {
+            "total": total,
+            "pagina_actual": pagina,
+            "por_pagina": por_pagina,
+            "total_paginas": total_paginas,
+            "resultados": resultado
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error interno del servidor: {str(e)}"
+        )    
     
 #Reportes PDF - CSV
 @app.get("/reportes/csv/turnos-por-fecha")
@@ -719,4 +763,94 @@ def turnos_por_persona_csv(
         raise HTTPException(
             status_code=500,
             detail=f"Error generando CSV: {str(e)}"
+        )@app.get("/reportes/turnos-cancelados/pdf")
+async def reporte_pdf_turnos_cancelados(db: Session = Depends(get_db)):
+    try:
+        turnos = (
+            db.query(models.Turno)
+            .filter(models.Turno.estado == settings.ESTADO_CANCELADO)
+            .all()
         )
+
+        pdf_buffer = await asyncio.to_thread(
+            services.generar_pdf_turnos_cancelados,
+            turnos
+        )
+
+        headers = {"Content-Disposition": 'attachment; filename="turnos_cancelados.pdf"'}
+        return Response(
+            content=pdf_buffer.getvalue(),
+            headers=headers,
+            media_type="application/pdf"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando PDF: {str(e)}"
+        )
+    
+@app.get("/reportes/turnos-cancelados/csv")
+def reporte_csv_turnos_cancelados(db: Session = Depends(get_db)):
+    try:
+        turnos = (
+            db.query(models.Turno)
+            .filter(models.Turno.estado == settings.ESTADO_CANCELADO)
+            .all()
+        )
+
+        if not turnos:
+            raise HTTPException(status_code=404, detail="No hay turnos cancelados")
+
+        csv_buffer = services.generar_csv_turnos_cancelados(turnos)
+
+        response = StreamingResponse(
+            iter([csv_buffer.getvalue()]),
+            media_type="text/csv"
+        )
+        response.headers["Content-Disposition"] = "attachment; filename=turnos_cancelados.csv"
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando CSV: {str(e)}"
+        )    
+    
+@app.get("/reportes/estado-personas/pdf")
+async def reporte_pdf_estado_personas(db: Session = Depends(get_db)):
+    try:
+        personas = crud.get_personas(db)
+        resultado = []
+
+        for persona in personas:
+            puede_sacar = services.puede_sacar_turno(db, persona.id)
+            estado = "habilitado" if persona.habilitado and puede_sacar else "inhabilitado"
+
+            resultado.append({
+                "id": persona.id,
+                "nombre": persona.nombre,
+                "dni": persona.dni,
+                "email": persona.email,
+                "estado_general": estado
+            })
+
+        pdf_buffer = await asyncio.to_thread(
+            services.generar_pdf_estado_personas,
+            resultado
+        )
+
+        headers = {"Content-Disposition": 'attachment; filename="estado_personas.pdf"'}
+        return Response(
+            content=pdf_buffer.getvalue(),
+            headers=headers,
+            media_type="application/pdf"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando PDF: {str(e)}"
+        )    
