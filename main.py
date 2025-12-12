@@ -641,62 +641,82 @@ def turnos_cancelados_por_mes_csv(
 @app.get("/reportes/pdf/turnos-por-persona")
 def turnos_por_persona_pdf(
     dni: str,
+    page: int = Query(1, ge=1),
+    size: int = Query(5, ge=1, le=20),
     db: Session = Depends(get_db)
 ):
     try:
-        # Busca persona
         persona = crud.get_persona_por_dni(db, dni)
         if not persona:
             raise HTTPException(status_code=404, detail="Persona no encontrada")
 
-        # Busca turnos
-        turnos = crud.get_turnos_por_persona_simple(db, persona.id)
+        skip = (page - 1) * size
 
-        # Genera PDF con service
-        pdf_buffer = services.generar_pdf_turnos_persona(turnos, persona)
+        turnos_paginados = crud.get_turnos_por_persona_paginado(
+            db, persona.id, skip=skip, limit=size
+        )
 
-        # Respuesta HTTP con archivo descargable
+        if not turnos_paginados:
+            raise HTTPException(status_code=404, detail="No hay turnos para mostrar")
+
+        pdf_buffer = services.generar_pdf_turnos_persona_paginado(
+            turnos_paginados, persona
+        )
+
         return Response(
             content=pdf_buffer.getvalue(),
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f"attachment; filename=turnos_{persona.dni}.pdf"
+                "Content-Disposition": f"attachment; filename=turnos_{persona.dni}_page{page}.pdf"
             }
         )
 
     except HTTPException:
         raise
-
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Error generando PDF: {str(e)}"
         )
 
-
 @app.get("/reportes/csv/turnos-por-persona")
-def turnos_por_persona_csv(dni: str, db: Session = Depends(get_db)):
+def turnos_por_persona_csv(
+    dni: str,
+    page: int = Query(1, ge=1),
+    size: int = Query(5, ge=1, le=20),
+    db: Session = Depends(get_db)
+):
     try:
         persona = crud.get_persona_por_dni(db, dni)
         if not persona:
             raise HTTPException(status_code=404, detail="Persona no encontrada")
 
-        # CSV usa la función SIN paginación
-        turnos = crud.get_turnos_por_persona_simple(db, persona.id)
-        if not turnos:
-            raise HTTPException(status_code=404, detail="No hay turnos para esta persona")
+        skip = (page - 1) * size
 
-        csv_buffer = services.generar_csv_turnos_persona(turnos,persona)
+        turnos_paginados = crud.get_turnos_por_persona_paginado(
+            db, persona.id, skip=skip, limit=size
+        )
+
+        if not turnos_paginados:
+            raise HTTPException(status_code=404, detail="No hay turnos para mostrar")
+
+        csv_buffer = services.generar_csv_turnos_persona_paginado(
+            turnos_paginados, persona
+        )
 
         response = StreamingResponse(
             iter([csv_buffer.getvalue()]),
             media_type="text/csv"
         )
-        response.headers["Content-Disposition"] = f"attachment; filename=turnos_persona_{dni}.csv"
+        response.headers["Content-Disposition"] = (
+            f"attachment; filename=turnos_{persona.dni}_page{page}.csv"
+        )
         return response
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generando CSV: {str(e)}")
-
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando CSV: {str(e)}"
+        )

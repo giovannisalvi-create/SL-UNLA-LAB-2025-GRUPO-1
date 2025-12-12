@@ -230,3 +230,65 @@ def generar_pdf_turnos_persona(turnos, persona):
     PDF.dumps(buffer, doc)
     buffer.seek(0)
     return buffer
+
+
+def generar_csv_turnos_persona_paginado(turnos, persona):
+    buffer = io.StringIO()
+
+    data = []
+
+    for turno, nombre, dni in turnos:
+        data.append({
+            "ID Persona": persona.id,
+            "Nombre": nombre,
+            "DNI": dni,
+            "ID Turno": turno.id,
+            "Fecha": turno.fecha,
+            "Hora": turno.hora,
+            "Estado": turno.estado
+        })
+
+    df = pd.DataFrame(data)
+    df.to_csv(buffer, index=False)
+
+    buffer.seek(0)
+    return buffer
+
+def generar_pdf_turnos_persona_paginado(turnos, persona):
+    buffer = io.BytesIO()
+    doc = Document()
+
+    page = Page()
+    doc.add_page(page)
+    layout = SingleColumnLayout(page)
+
+    layout.add(
+        Paragraph(
+            f"Reporte de Turnos Paginado - {persona.nombre} (DNI {persona.dni})",
+            font_size=Decimal(14)
+        )
+    )
+
+    table = FixedColumnWidthTable(
+        number_of_rows=len(turnos) + 1,
+        number_of_columns=7
+    )
+
+    headers = ["ID Persona", "Nombre","DNI","ID Turno", "Fecha", "Hora", "Estado"]
+    for h in headers:
+        table.add(TableCell(Paragraph(h)))
+
+    for turno, nombre, dni in turnos:
+        table.add(TableCell(Paragraph(str(persona.id))))
+        table.add(TableCell(Paragraph(nombre)))
+        table.add(TableCell(Paragraph(str(dni))))
+        table.add(TableCell(Paragraph(str(turno.id))))
+        table.add(TableCell(Paragraph(str(turno.fecha))))
+        table.add(TableCell(Paragraph(str(turno.hora))))
+        table.add(TableCell(Paragraph(str(turno.estado))))
+
+    layout.add(table)
+
+    PDF.dumps(buffer, doc)
+    buffer.seek(0)
+    return buffer

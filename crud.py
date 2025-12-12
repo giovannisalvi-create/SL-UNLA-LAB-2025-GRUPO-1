@@ -106,11 +106,4 @@ def get_turnos_por_persona_paginado(db: Session, persona_id: int, skip: int = 0,
         .all()
     )
 
-def get_turnos_por_persona_simple(db: Session, persona_id: int):
-    return (
-        db.query(models.Turno)
-        .filter(models.Turno.persona_id == persona_id)
-        .all()
-    )
-
 
