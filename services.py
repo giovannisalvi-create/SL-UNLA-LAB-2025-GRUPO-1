@@ -357,46 +357,97 @@ def generar_pdf_turnos_confirmados_periodos(resultados: list, desde: date, hasta
     """
     Genera un PDF con los turnos confirmados en un período específico
     """
+    
+    # Función interna para manejar texto (tildes y división)
+    def preparar_texto(texto: any, max_len: int = 25) -> str:
+        """Prepara texto para PDF: maneja tildes y divide si es muy largo"""
+        if texto is None:
+            return ""
+        
+        texto_str = str(texto)
+        
+        # SOLUCIÓN TILDES: Convertir "José María" → "Jose Maria"
+        try:
+            import unicodedata
+            # Normalizar y remover acentos
+            texto_normalizado = unicodedata.normalize('NFKD', texto_str)
+            texto_sin_acentos = ''.join(
+                c for c in texto_normalizado 
+                if not unicodedata.combining(c)
+            )
+            texto_str = texto_sin_acentos
+        except:
+            pass  # Si falla, usar texto original
+        
+        # SOLUCIÓN EMAIL LARGO: Dividir si es muy largo
+        if len(texto_str) > max_len and "@" in texto_str:
+            # Para emails: partir antes del @
+            usuario, dominio = texto_str.split("@", 1)
+            if len(usuario) > 20:
+                usuario = usuario[:17] + "..."
+            texto_str = f"{usuario}\n@{dominio}"
+        elif len(texto_str) > max_len:
+            # Para otros textos: dividir en líneas
+            lineas = [texto_str[i:i+max_len] for i in range(0, len(texto_str), max_len)]
+            texto_str = "\n".join(lineas)
+        
+        return texto_str
+    
+    # Crear PDF
     pdf_buffer = io.BytesIO()
     doc = Document()
     page = Page()
     doc.add_page(page)
     layout = SingleColumnLayout(page)
     
-    # Título
+    # Título del reporte
     layout.add(Paragraph(f"Reporte de Turnos Confirmados", font_size=Decimal(16)))
     layout.add(Paragraph(f"Período: {desde} a {hasta}", font_size=Decimal(12)))
-    layout.add(Paragraph(f"Página {pagina} de {total_paginas} - Total de turnos: {total}", font_size=Decimal(10)))
+    layout.add(Paragraph(f"Página {pagina} de {total_paginas} - Total de turnos: {total}", 
+                        font_size=Decimal(10)))
     layout.add(Paragraph(f"Fecha de generación: {date.today()}", font_size=Decimal(10)))
     
     if resultados:
-        # Tabla de turnos
+        # Crear tabla con anchos optimizados
         table = FixedColumnWidthTable(
             number_of_rows=len(resultados) + 1,
-            number_of_columns=7
+            number_of_columns=7,
+            column_widths=[
+                Decimal(1),   # ID
+                Decimal(2),   # Fecha
+                Decimal(1.5), # Hora
+                Decimal(2),   # Estado
+                Decimal(3),   # Nombre
+                Decimal(2),   # DNI
+                Decimal(3.5)  # Email (más ancho)
+            ]
         )
         
-        # Encabezados
-        headers = ["ID Turno", "Fecha", "Hora", "Estado", "Nombre", "DNI", "Email"]
+        # ENCABEZADOS
+        headers = ["ID", "Fecha", "Hora", "Estado", "Nombre", "DNI", "Email"]
         for h in headers:
-            table.add(TableCell(Paragraph(h, font="Helvetica-Bold")))
+            table.add(TableCell(
+                Paragraph(preparar_texto(h), font="Helvetica-Bold")
+            ))
         
-        # Filas de datos
+        # DATOS
         for item in resultados:
-            table.add(TableCell(Paragraph(str(item["id"]))))
-            table.add(TableCell(Paragraph(str(item["fecha"]))))
-            table.add(TableCell(Paragraph(str(item["hora"]))))
-            table.add(TableCell(Paragraph(str(item["estado"]))))
-            table.add(TableCell(Paragraph(str(item["nombre_persona"]))))
-            table.add(TableCell(Paragraph(str(item["dni_persona"]))))
-            table.add(TableCell(Paragraph(str(item["email_persona"]))))
+            table.add(TableCell(Paragraph(preparar_texto(item["id"]))))
+            table.add(TableCell(Paragraph(preparar_texto(item["fecha"]))))
+            table.add(TableCell(Paragraph(preparar_texto(item["hora"]))))
+            table.add(TableCell(Paragraph(preparar_texto(item["estado"]))))
+            table.add(TableCell(Paragraph(preparar_texto(item["nombre_persona"], 20))))
+            table.add(TableCell(Paragraph(preparar_texto(item["dni_persona"]))))
+            table.add(TableCell(Paragraph(preparar_texto(item["email_persona"], 25))))
         
         layout.add(table)
     else:
         layout.add(Paragraph("No hay turnos confirmados en este período."))
     
+    # Generar PDF
     PDF.dumps(pdf_buffer, doc)
     pdf_buffer.seek(0)
+    
     return pdf_buffer
 
 
