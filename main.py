@@ -855,7 +855,8 @@ async def reporte_pdf_estado_personas(db: Session = Depends(get_db)):
             detail=f"Error generando PDF: {str(e)}"
         )    
     
- @app.get("/reportes/estado-personas/csv")
+    
+@app.get("/reportes/estado-personas/csv")
 def reporte_csv_estado_personas(
     pagina: int = Query(1, ge=1),
     por_pagina: int = Query(5, ge=1),
@@ -941,7 +942,7 @@ async def reporte_pdf_turnos_confirmados_periodos(
         fin = inicio + por_pagina
         turnos_pagina = turnos_confirmados[inicio:fin]
         
-        # Preparar datos para el PDF (similar al endpoint JSON)
+        #  datos para el PDF (similar al endpoint JSON)
         resultados = []
         for turno in turnos_pagina:
             persona = crud.get_persona(db, turno.persona_id)
