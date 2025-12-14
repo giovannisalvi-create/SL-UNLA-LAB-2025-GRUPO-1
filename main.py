@@ -706,15 +706,28 @@ def turnos_por_persona_pdf(
         if not turnos_paginados:
             raise HTTPException(status_code=404, detail="No hay turnos para mostrar")
 
+        total_turnos = db.query(models.Turno).filter(
+            models.Turno.persona_id == persona.id
+        ).count()
+
+        total_paginas = (total_turnos + size - 1) // size
+
+        #  PDF con info completa de paginación
         pdf_buffer = services.generar_pdf_turnos_persona_paginado(
-            turnos_paginados, persona
+            turnos=turnos_paginados,
+            persona=persona,
+            pagina=page,
+            tamanio=size,
+            total_paginas=total_paginas,
+            total_turnos=total_turnos
         )
 
         return StreamingResponse(
             iter([pdf_buffer.getvalue()]),
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f"attachment; filename=turnos_{persona.dni}_page{page}.pdf"
+                "Content-Disposition":
+                    f"attachment; filename=turnos_{persona.dni}_page{page}.pdf"
             }
         )
 
@@ -747,18 +760,29 @@ def turnos_por_persona_csv(
         if not turnos_paginados:
             raise HTTPException(status_code=404, detail="No hay turnos para mostrar")
 
+        total_turnos = db.query(models.Turno).filter(
+            models.Turno.persona_id == persona.id
+        ).count()
+
+        total_paginas = (total_turnos + size - 1) // size
+
         csv_buffer = services.generar_csv_turnos_persona_paginado(
-            turnos_paginados, persona
+            turnos=turnos_paginados,
+            persona=persona,
+            pagina=page,
+            tamanio=size,
+            total_paginas=total_paginas,
+            total_turnos=total_turnos
         )
 
-        response = StreamingResponse(
+        return StreamingResponse(
             iter([csv_buffer.getvalue()]),
-            media_type="text/csv"
+            media_type="text/csv",
+            headers={
+                "Content-Disposition":
+                f"attachment; filename=turnos_{persona.dni}_page{page}.csv"
+            }
         )
-        response.headers["Content-Disposition"] = (
-            f"attachment; filename=turnos_{persona.dni}_page{page}.csv"
-        )
-        return response
 
     except HTTPException:
         raise
