@@ -166,13 +166,12 @@ def generar_csv_turnos_cancelados_mes(turnos: list, mes: str, anio: int) -> io.S
     df = pd.DataFrame(data)
 
     buffer = io.StringIO()
-    df.to_csv(buffer, index=False)
+    df.to_csv(buffer, index=False, sep=",")
     buffer.seek(0)
     return buffer
 
 
 def generar_csv_turnos_persona_paginado(turnos, persona):
-    buffer = io.StringIO()
 
     data = []
 
@@ -188,8 +187,9 @@ def generar_csv_turnos_persona_paginado(turnos, persona):
         })
 
     df = pd.DataFrame(data)
-    df.to_csv(buffer, index=False)
 
+    buffer = io.StringIO()
+    df.to_csv(buffer, index=False, sep=",")
     buffer.seek(0)
     return buffer
 
@@ -203,7 +203,7 @@ def generar_pdf_turnos_persona_paginado(turnos, persona):
 
     layout.add(
         Paragraph(
-            f"Reporte de Turnos Paginado - {persona.nombre} (DNI {persona.dni})",
+            f"Reporte de Turnos - {persona.nombre} (DNI {persona.dni})",
             font_size=Decimal(14)
         )
     )
@@ -215,7 +215,7 @@ def generar_pdf_turnos_persona_paginado(turnos, persona):
 
     headers = ["ID Persona", "Nombre","DNI","ID Turno", "Fecha", "Hora", "Estado"]
     for h in headers:
-        table.add(TableCell(Paragraph(h)))
+        table.add(TableCell(Paragraph(h, font="Helvetica-Bold")))
 
     for turno, nombre, dni in turnos:
         table.add(TableCell(Paragraph(str(persona.id))))
