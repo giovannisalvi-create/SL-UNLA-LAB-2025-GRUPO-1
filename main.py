@@ -643,12 +643,13 @@ async def reporte_pdf_turnos_cancelados_mes(
         turnos = crud.get_turnos_cancelados_por_mes(db, anio, mes)
         nombre_mes = services.nombre_mes(mes).capitalize()
 
-        #pdf_buffer = services.generar_pdf_cancelados_mes(turnos, nombre_mes, anio)
         pdf_buffer = await asyncio.to_thread(services.generar_pdf_cancelados_mes, turnos, nombre_mes, anio)
 
         headers = {'Content-Disposition': f'attachment; filename="cancelados_{nombre_mes}_{anio}.pdf"'}
         return Response(content=pdf_buffer.getvalue(), headers=headers, media_type='application/pdf')
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
 
@@ -672,12 +673,14 @@ def turnos_cancelados_por_mes_csv(
 
         # Devolver CSV como streaming
         filename = f"turnos_cancelados_{nombre_mes_str}_{anio}.csv"
-        return Response(
-            content=csv_buffer.getvalue(),
+        return StreamingResponse(
+            iter([csv_buffer.getvalue()]),
             media_type="text/csv",
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
-
+    
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generando CSV: {str(e)}")
     
@@ -707,8 +710,8 @@ def turnos_por_persona_pdf(
             turnos_paginados, persona
         )
 
-        return Response(
-            content=pdf_buffer.getvalue(),
+        return StreamingResponse(
+            iter([pdf_buffer.getvalue()]),
             media_type="application/pdf",
             headers={
                 "Content-Disposition": f"attachment; filename=turnos_{persona.dni}_page{page}.pdf"
@@ -763,7 +766,9 @@ def turnos_por_persona_csv(
         raise HTTPException(
             status_code=500,
             detail=f"Error generando CSV: {str(e)}"
-        )@app.get("/reportes/turnos-cancelados/pdf")
+        )
+    
+@app.get("/reportes/turnos-cancelados/pdf")
 async def reporte_pdf_turnos_cancelados(db: Session = Depends(get_db)):
     try:
         turnos = (
