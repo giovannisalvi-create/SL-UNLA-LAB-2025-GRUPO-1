@@ -171,10 +171,29 @@ def generar_csv_turnos_cancelados_mes(turnos: list, mes: str, anio: int) -> io.S
     return buffer
 
 
-def generar_csv_turnos_persona_paginado(turnos, persona):
+def generar_csv_turnos_persona_paginado(
+    turnos,
+    persona,
+    pagina: int,
+    tamanio: int,
+    total_paginas: int,
+    total_turnos: int
+) -> io.StringIO:
+
+    buffer = io.StringIO()
+
+    buffer.write("# Reporte de Turnos por Persona\n")
+    buffer.write(
+        f"# Persona: {persona.nombre} - DNI {persona.dni}\n"
+    )
+    buffer.write(
+        f"# Pagina: {pagina} de {total_paginas} "
+        f"- Tamanio pagina: {tamanio} "
+        f"- Total turnos: {total_turnos}\n"
+    )
+
 
     data = []
-
     for turno, nombre, dni in turnos:
         data.append({
             "ID Persona": persona.id,
@@ -188,12 +207,19 @@ def generar_csv_turnos_persona_paginado(turnos, persona):
 
     df = pd.DataFrame(data)
 
-    buffer = io.StringIO()
     df.to_csv(buffer, index=False, sep=",")
     buffer.seek(0)
     return buffer
 
-def generar_pdf_turnos_persona_paginado(turnos, persona):
+
+def generar_pdf_turnos_persona_paginado(
+    turnos,
+    persona,
+    pagina: int,
+    tamanio: int,
+    total_paginas: int,
+    total_turnos: int
+):
     buffer = io.BytesIO()
     doc = Document()
 
@@ -208,12 +234,21 @@ def generar_pdf_turnos_persona_paginado(turnos, persona):
         )
     )
 
+    layout.add(
+        Paragraph(
+            f"Página {pagina} de {total_paginas} | "
+            f"Tamaño página: {tamanio} | "
+            f"Total turnos: {total_turnos}",
+            font_size=Decimal(9)
+        )
+    )
+
     table = FixedColumnWidthTable(
         number_of_rows=len(turnos) + 1,
         number_of_columns=7
     )
 
-    headers = ["ID Persona", "Nombre","DNI","ID Turno", "Fecha", "Hora", "Estado"]
+    headers = ["ID Persona", "Nombre", "DNI", "ID Turno", "Fecha", "Hora", "Estado"]
     for h in headers:
         table.add(TableCell(Paragraph(h, font="Helvetica-Bold")))
 
