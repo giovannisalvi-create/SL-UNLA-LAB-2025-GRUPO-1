@@ -72,82 +72,82 @@ def nombre_mes(mes: int) -> str:
     return MESES.get(mes, "mes desconocido")
 
 #-------- LÓGICA PARA REPORTES PDF CSV
-def generar_csv_turnos_fecha(turnos_data: list) -> io.StringIO:
-    data_list = []
-    for t in turnos_data:
-        data_list.append({
-            "ID Turno": t.Turno.id,
-            "Fecha": t.Turno.fecha,
-            "Hora": t.Turno.hora,
-            "Estado": t.Turno.estado,
-            "Nombre Persona": t.nombre,
-            "DNI Persona": t.dni
+def generar_csv_turnos_fecha(lista_turnos: list) -> io.StringIO:
+    contenido_csv = []
+    for turno in lista_turnos:
+        contenido_csv.append({
+            "ID Turno": turno.Turno.id,
+            "Fecha": turno.Turno.fecha,
+            "Hora": turno.Turno.hora,
+            "Estado": turno.Turno.estado,
+            "Nombre Persona": turno.nombre,
+            "DNI Persona": turno.dni
         })
 
-    df = pd.DataFrame(data_list)
+    df = pd.DataFrame(contenido_csv)
 
     stream = io.StringIO()
     df.to_csv(stream, index=False, sep=";")
     return stream
 
-def generar_pdf_turnos_fecha(turnos_data: list, fecha: date) -> io.BytesIO:
+def generar_pdf_turnos_fecha(lista_turnos: list, fecha: date) -> io.BytesIO:
     #Configuración de Borb
     pdf_buffer = io.BytesIO()
-    doc = Document()
-    page = Page()
-    doc.add_page(page)
-    layout = SingleColumnLayout(page)
+    documento = Document()
+    pagina = Page()
+    documento.add_page(pagina)
+    layout = SingleColumnLayout(pagina)
     
     #Titulo
     layout.add(Paragraph(f"Reporte de turnos del día: {fecha}", font_size=Decimal(14)))
     
-    table = FixedColumnWidthTable(number_of_rows=len(turnos_data) +1, number_of_columns=5)
-    headers = ["ID", "Hora", "Estado", "Nombre", "DNI"]
-    for h in headers:
-        table.add(TableCell(Paragraph(h, font="Helvetica-Bold"), background_color=None))
+    table = FixedColumnWidthTable(number_of_rows=len(lista_turnos) +1, number_of_columns=5)
+    encabezados = ["ID", "Hora", "Estado", "Nombre", "DNI"]
+    for encabezado in encabezados:
+        table.add(TableCell(Paragraph(encabezado, font="Helvetica-Bold"), background_color=None))
 
-    for t in turnos_data:
-        table.add(TableCell(Paragraph(str(t.Turno.id))))
-        table.add(TableCell(Paragraph(str(t.Turno.hora))))
-        table.add(TableCell(Paragraph(str(t.Turno.estado))))
-        table.add(TableCell(Paragraph(str(t.nombre))))
-        table.add(TableCell(Paragraph(str(t.dni))))
+    for turno in lista_turnos:
+        table.add(TableCell(Paragraph(str(turno.Turno.id))))
+        table.add(TableCell(Paragraph(str(turno.Turno.hora))))
+        table.add(TableCell(Paragraph(str(turno.Turno.estado))))
+        table.add(TableCell(Paragraph(str(turno.nombre))))
+        table.add(TableCell(Paragraph(str(turno.dni))))
 
     layout.add(table)
     
-    PDF.dumps(pdf_buffer, doc)
+    PDF.dumps(pdf_buffer, documento)
     pdf_buffer.seek(0)
     return pdf_buffer
 
-def generar_pdf_cancelados_mes(turnos: list, mes: str, anio: int) -> io.BytesIO:
+def generar_pdf_cancelados_mes(lista_turnos: list, mes: str, anio: int) -> io.BytesIO:
     pdf_buffer = io.BytesIO()
-    doc = Document()
-    page = Page()
-    doc.add_page(page)
-    layout = SingleColumnLayout(page)
+    documento = Document()
+    pagina = Page()
+    documento.add_page(pagina)
+    layout = SingleColumnLayout(pagina)
     
     layout.add(Paragraph(f"Turnos Cancelados - {mes} {anio}", font_size=Decimal(14)))
-    layout.add(Paragraph(f"Total cancelados: {len(turnos)}", font_size=Decimal(10)))
+    layout.add(Paragraph(f"Total cancelados: {len(lista_turnos)}", font_size=Decimal(10)))
     
-    if turnos:
+    if lista_turnos:
         # Tabla: ID, Fecha, Hora (3 columnas)
-        table = FixedColumnWidthTable(number_of_rows=len(turnos) + 1, number_of_columns=3)
+        table = FixedColumnWidthTable(number_of_rows=len(lista_turnos) + 1, number_of_columns=3)
         
         # Encabezados
-        for h in ["ID Turno", "Fecha", "Hora"]:
-            table.add(TableCell(Paragraph(h, font="Helvetica-Bold")))
+        for encabezado in ["ID Turno", "Fecha", "Hora"]:
+            table.add(TableCell(Paragraph(encabezado, font="Helvetica-Bold")))
 
         # Filas
-        for t in turnos:
-            table.add(TableCell(Paragraph(str(t.id))))
-            table.add(TableCell(Paragraph(str(t.fecha))))
-            table.add(TableCell(Paragraph(str(t.hora))))
+        for turno in lista_turnos:
+            table.add(TableCell(Paragraph(str(turno.id))))
+            table.add(TableCell(Paragraph(str(turno.fecha))))
+            table.add(TableCell(Paragraph(str(turno.hora))))
 
         layout.add(table)
     else:
         layout.add(Paragraph("No hay turnos cancelados en este período."))
 
-    PDF.dumps(pdf_buffer, doc)
+    PDF.dumps(pdf_buffer, documento)
     pdf_buffer.seek(0)
     return pdf_buffer
 
@@ -166,7 +166,7 @@ def generar_csv_turnos_cancelados_mes(turnos: list, mes: str, anio: int) -> io.S
     df = pd.DataFrame(data)
 
     buffer = io.StringIO()
-    df.to_csv(buffer, index=False, sep=",")
+    df.to_csv(buffer, index=False, sep=";")
     buffer.seek(0)
     return buffer
 
@@ -207,7 +207,7 @@ def generar_csv_turnos_persona_paginado(
 
     df = pd.DataFrame(data)
 
-    df.to_csv(buffer, index=False, sep=",")
+    df.to_csv(buffer, index=False, sep=";")
     buffer.seek(0)
     return buffer
 

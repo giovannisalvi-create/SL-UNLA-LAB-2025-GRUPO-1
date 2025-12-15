@@ -1,4 +1,3 @@
-#Acá vamos a centralizar toda la configuración de las variables de entorno
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
@@ -13,8 +12,6 @@ class Config:
     _estados_str = os.getenv("ESTADOS", "pendiente,confirmado,cancelado,asistido")
     ESTADOS_VALIDOS = [e.strip().lower() for e in _estados_str.split(",")]
     
-    # Esto permite que el código sepa cuál string corresponde a cada acción.
-    # Si cambiamos el .env a inglés, solo actualizas aquí el valor y todo el main.py sigue funcionando.
     ESTADO_PENDIENTE = "pendiente"
     ESTADO_CONFIRMADO = "confirmado"
     ESTADO_CANCELADO = "cancelado"

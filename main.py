@@ -4,9 +4,8 @@ from database import Base, engine, get_db
 import crud, schemas, models, services
 from datetime import date
 from config import settings
-from fastapi.responses import Response, StreamingResponse, FileResponse
+from fastapi.responses import Response, StreamingResponse
 import asyncio
-import pandas as pd
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="TP - API de Turnos")
@@ -590,10 +589,11 @@ def reporte_estado_personas(
     
 #Reportes PDF - CSV
 @app.get("/reportes/csv/turnos-por-fecha")
-def reporte_csv_turnos_fecha(fecha: date, db: Session = Depends(get_db)):
+def reporte_csv_turnos_fecha(fecha: date, pagina: int = Query(1, ge=1), cantidad: int = Query(10, ge=1), db: Session = Depends(get_db)):
     try:
+        skip_calculado = (pagina - 1) * cantidad
         # Reutilizamos la query existente en crud
-        turnos = crud.get_turnos_por_fecha(db, fecha)
+        turnos = crud.get_turnos_por_fecha(db, fecha, skip=skip_calculado, limit=cantidad)
         if not turnos:
             raise HTTPException(status_code=404, detail="No hay turnos para esa fecha")
         
@@ -602,7 +602,7 @@ def reporte_csv_turnos_fecha(fecha: date, db: Session = Depends(get_db)):
         
         # Devolvemos StreamingResponse para descargar el archivo
         response = StreamingResponse(iter([csv_buffer.getvalue()]), media_type="text/csv")
-        response.headers["Content-Disposition"] = f"attachment; filename=turnos_{fecha}.csv"
+        response.headers["Content-Disposition"] = f"attachment; filename=turnos_{fecha}_pagina{pagina}.csv"
         return response
 
     except HTTPException:
@@ -611,17 +611,17 @@ def reporte_csv_turnos_fecha(fecha: date, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error generando CSV: {str(e)}")
 
 @app.get("/reportes/pdf/turnos-por-fecha")
-async def reporte_pdf_turnos_fecha(fecha: date, db: Session = Depends(get_db)):
+def reporte_pdf_turnos_fecha(fecha: date, pagina: int = Query(1, ge=1), cantidad: int = Query(10, ge=1),  db: Session = Depends(get_db)):
     try:
-        turnos = crud.get_turnos_por_fecha(db, fecha)
+        skip_calculado = (pagina - 1) * cantidad
+        
+        turnos = crud.get_turnos_por_fecha(db, fecha, skip=skip_calculado, limit=cantidad)
         if not turnos:
             raise HTTPException(status_code=404, detail="No hay turnos para esa fecha")
         
-        #pdf_buffer = services.generar_pdf_turnos_fecha(turnos, fecha)
-        pdf_buffer = await asyncio.to_thread(services.generar_pdf_turnos_fecha, turnos, fecha)
+        pdf_buffer = services.generar_pdf_turnos_fecha(turnos, fecha)
         
-        # Para PDF usamos Response con content type application/pdf
-        headers = {'Content-Disposition': f'attachment; filename="turnos_{fecha}.pdf"'}
+        headers = {'Content-Disposition': f'attachment; filename="turnos_{fecha}_pagina{pagina}.pdf"'}
         return Response(content=pdf_buffer.getvalue(), headers=headers, media_type='application/pdf')
 
     except HTTPException:
@@ -630,26 +630,28 @@ async def reporte_pdf_turnos_fecha(fecha: date, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
 
 @app.get("/reportes/pdf/turnos-cancelados-por-mes")
-async def reporte_pdf_turnos_cancelados_mes(
+def reporte_pdf_turnos_cancelados_mes(
     mes: int = Query(None, ge=1, le=12),
     anio: int = Query(None, ge=2022, le=2026),
+    pagina: int = Query(1, ge=1),
+    cantidad: int = Query(10, ge=1),
     db: Session = Depends(get_db)
 ):
     try:
         hoy = date.today()
         mes = mes or hoy.month
         anio = anio or hoy.year
+        
+        skip_calculado = (pagina - 1) * cantidad
 
-        turnos = crud.get_turnos_cancelados_por_mes(db, anio, mes)
+        turnos = crud.get_turnos_cancelados_por_mes(db, anio, mes, skip=skip_calculado, limit=cantidad)
         nombre_mes = services.nombre_mes(mes).capitalize()
 
-        pdf_buffer = await asyncio.to_thread(services.generar_pdf_cancelados_mes, turnos, nombre_mes, anio)
+        pdf_buffer = services.generar_pdf_cancelados_mes(turnos, nombre_mes, anio)
 
-        headers = {'Content-Disposition': f'attachment; filename="cancelados_{nombre_mes}_{anio}.pdf"'}
+        headers = {'Content-Disposition': f'attachment; filename="cancelados_{nombre_mes}_{anio}_pagina{pagina}.pdf"'}
         return Response(content=pdf_buffer.getvalue(), headers=headers, media_type='application/pdf')
 
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
 
