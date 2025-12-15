@@ -354,88 +354,62 @@ def generar_pdf_estado_personas(personas_data: list) -> io.BytesIO:
     return pdf_buffer
 
 def generar_csv_estado_personas(resultado: list, pagina: int, total_paginas: int) -> io.StringIO:
-    """
-    Genera un archivo CSV con el estado de las personas
-    """
     buffer = io.StringIO()
     
-    # Crear DataFrame con los datos
+    # Crear DataFrame con datos esenciales
     data = []
     for persona in resultado:
         data.append({
             "ID": persona["id"],
-            "Nombre": persona["nombre"],
             "DNI": persona["dni"],
-            "Email": persona["email"],
+            "Nombre": persona["nombre"],
+            "Estado": persona["estado_general"],
             "Telefono": persona["telefono"],
-            "Habilitado": "Sí" if persona["habilitado"] else "No",
-            "Puede sacar turno": "Sí" if persona["puede_sacar_turno"] else "No",
-            "Estado General": persona["estado_general"]
+            "Habilitado": "Si" if persona["habilitado"] else "No",
+            "Puede sacar turno": "Si" if persona["puede_sacar_turno"] else "No",
+            "Email": persona["email"]
+            
         })
     
     df = pd.DataFrame(data)
-    
-    # Agregar información de paginación como comentario al inicio del CSV
-    header_info = f"# Reporte de Estado de Personas - Página {pagina} de {total_paginas}\n"
-    header_info += f"# Total de registros en esta página: {len(resultado)}\n"
-    header_info += f"# Fecha de generación: {date.today()}\n\n"
-    
-    buffer.write(header_info)
-    df.to_csv(buffer, index=False, sep=";")
+    buffer.write('\ufeff')
+    df.to_csv(
+        buffer,
+        index=False,
+        sep=";",
+        encoding='utf-8-sig'
+    )
     
     buffer.seek(0)
     return buffer
 
-
 def generar_pdf_turnos_confirmados_periodos(resultados: list, desde: date, hasta: date, 
-                                          pagina: int, total_paginas: int, total: int) -> io.BytesIO:
-    """
-    Genera un PDF con los turnos confirmados en un período específico
-    """
+    pagina: int, total_paginas: int, total: int) -> io.BytesIO:
     
-    # Función interna para manejar texto (tildes y división)
-    def preparar_texto(texto: any, max_len: int = 25) -> str:
-        """Prepara texto para PDF: maneja tildes y divide si es muy largo"""
+    def preparar_texto_pdf(texto: any, max_len: int = 25) -> str:
         if texto is None:
             return ""
         
         texto_str = str(texto)
-        
-        # SOLUCIÓN TILDES: Convertir "José María" → "Jose Maria"
-        try:
-            import unicodedata
-            # Normalizar y remover acentos
-            texto_normalizado = unicodedata.normalize('NFKD', texto_str)
-            texto_sin_acentos = ''.join(
-                c for c in texto_normalizado 
-                if not unicodedata.combining(c)
-            )
-            texto_str = texto_sin_acentos
-        except:
-            pass  # Si falla, usar texto original
-        
-        # SOLUCIÓN EMAIL LARGO: Dividir si es muy largo
         if len(texto_str) > max_len and "@" in texto_str:
-            # Para emails: partir antes del @
             usuario, dominio = texto_str.split("@", 1)
             if len(usuario) > 20:
                 usuario = usuario[:17] + "..."
             texto_str = f"{usuario}\n@{dominio}"
         elif len(texto_str) > max_len:
-            # Para otros textos: dividir en líneas
             lineas = [texto_str[i:i+max_len] for i in range(0, len(texto_str), max_len)]
             texto_str = "\n".join(lineas)
         
         return texto_str
     
-    # Crear PDF
+    #Crear PDF
     pdf_buffer = io.BytesIO()
     doc = Document()
     page = Page()
     doc.add_page(page)
     layout = SingleColumnLayout(page)
     
-    # Título del reporte
+    #Título
     layout.add(Paragraph(f"Reporte de Turnos Confirmados", font_size=Decimal(16)))
     layout.add(Paragraph(f"Período: {desde} a {hasta}", font_size=Decimal(12)))
     layout.add(Paragraph(f"Página {pagina} de {total_paginas} - Total de turnos: {total}", 
@@ -443,80 +417,70 @@ def generar_pdf_turnos_confirmados_periodos(resultados: list, desde: date, hasta
     layout.add(Paragraph(f"Fecha de generación: {date.today()}", font_size=Decimal(10)))
     
     if resultados:
-        # Crear tabla con anchos optimizados
+        #Tabla con anchos optimizados
         table = FixedColumnWidthTable(
             number_of_rows=len(resultados) + 1,
             number_of_columns=7,
             column_widths=[
                 Decimal(1),   # ID
-                Decimal(2),   # Fecha
-                Decimal(1.5), # Hora
-                Decimal(2),   # Estado
-                Decimal(3),   # Nombre
-                Decimal(2),   # DNI
-                Decimal(3.5)  # Email (más ancho)
+                Decimal(3),   # Fecha
+                Decimal(2.5), # Hora
+                Decimal(3),   # Estado
+                Decimal(4),   # Nombre
+                Decimal(2.5),   # DNI
+                Decimal(4)  # Email
             ]
         )
         
-        # ENCABEZADOS
+        # Encabezados
         headers = ["ID", "Fecha", "Hora", "Estado", "Nombre", "DNI", "Email"]
         for h in headers:
-            table.add(TableCell(
-                Paragraph(preparar_texto(h), font="Helvetica-Bold")
-            ))
+            table.add(TableCell(Paragraph(h, font="Helvetica-Bold")))
         
-        # DATOS
         for item in resultados:
-            table.add(TableCell(Paragraph(preparar_texto(item["id"]))))
-            table.add(TableCell(Paragraph(preparar_texto(item["fecha"]))))
-            table.add(TableCell(Paragraph(preparar_texto(item["hora"]))))
-            table.add(TableCell(Paragraph(preparar_texto(item["estado"]))))
-            table.add(TableCell(Paragraph(preparar_texto(item["nombre_persona"], 20))))
-            table.add(TableCell(Paragraph(preparar_texto(item["dni_persona"]))))
-            table.add(TableCell(Paragraph(preparar_texto(item["email_persona"], 25))))
+            table.add(TableCell(Paragraph(str(item["id"]))))
+            table.add(TableCell(Paragraph(str(item["fecha"]))))
+            table.add(TableCell(Paragraph(str(item["hora"]))))
+            table.add(TableCell(Paragraph(str(item["estado"]))))
+            table.add(TableCell(Paragraph(preparar_texto_pdf(item["nombre_persona"], 20))))
+            table.add(TableCell(Paragraph(str(item["dni_persona"]))))
+            table.add(TableCell(Paragraph(preparar_texto_pdf(item["email_persona"], 25))))
         
         layout.add(table)
     else:
         layout.add(Paragraph("No hay turnos confirmados en este período."))
     
-    # Generar PDF
     PDF.dumps(pdf_buffer, doc)
     pdf_buffer.seek(0)
-    
     return pdf_buffer
 
 
 def generar_csv_turnos_confirmados_periodos(resultados: list, desde: date, hasta: date,
-                                          pagina: int, total_paginas: int, total: int) -> io.StringIO:
-    """
-    Genera un CSV con los turnos confirmados en un período específico
-    """
+    pagina: int, total_paginas: int, total: int) -> io.StringIO:
     buffer = io.StringIO()
     
-    # Encabezado informativo
-    header_info = f"# Reporte de Turnos Confirmados\n"
-    header_info += f"# Período: {desde} a {hasta}\n"
-    header_info += f"# Página {pagina} de {total_paginas} - Total de turnos: {total}\n"
-    header_info += f"# Fecha de generación: {date.today()}\n\n"
-    
-    buffer.write(header_info)
-    
-    # Crear DataFrame
     data = []
     for item in resultados:
         data.append({
-            "ID Turno": item["id"],
+            "ID_Turno": item["id"],
             "Fecha": item["fecha"],
             "Hora": item["hora"],
             "Estado": item["estado"],
-            "Persona ID": item["persona_id"],
-            "Nombre": item["nombre_persona"],
+            "ID_Persona": item["persona_id"],
             "DNI": item["dni_persona"],
+            "Nombre": item["nombre_persona"],
             "Email": item["email_persona"]
         })
     
     df = pd.DataFrame(data)
-    df.to_csv(buffer, index=False, sep=";")
+    buffer.write('\ufeff')
+    
+    df.to_csv(
+        buffer,
+        index=False,
+        sep=";",
+        encoding='utf-8-sig'
+    )
     
     buffer.seek(0)
     return buffer
