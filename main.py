@@ -940,7 +940,7 @@ def reporte_csv_estado_personas(
 
 
 @app.get("/reportes/turnos-confirmados-periodos/pdf")
-async def reporte_pdf_turnos_confirmados_periodos(
+def reporte_pdf_turnos_confirmados_periodos(  # ← QUITAR 'async'
     desde: str,
     hasta: str,
     pagina: int = Query(1, ge=1),
@@ -951,27 +951,27 @@ async def reporte_pdf_turnos_confirmados_periodos(
     Endpoint para descargar reporte de turnos confirmados en formato PDF
     """
     try:
-        # Validar formato de fechas (misma lógica que el endpoint JSON)
+        # Validar formato de fechas
         try:
             fecha_desde = date.fromisoformat(desde)
             fecha_hasta = date.fromisoformat(hasta)
         except Exception:
             raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD.")
         
-        # Obtener turnos confirmados (misma lógica que el endpoint JSON)
+        # Obtener turnos confirmados
         try:
             turnos_confirmados = services.obtener_turnos_confirmados_periodos(db, fecha_desde, fecha_hasta)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
         
-        # Paginación (misma lógica que el endpoint JSON)
+        # Paginación
         total = len(turnos_confirmados)
         total_paginas = (total + por_pagina - 1) // por_pagina
         inicio = (pagina - 1) * por_pagina
         fin = inicio + por_pagina
         turnos_pagina = turnos_confirmados[inicio:fin]
         
-        #  datos para el PDF (similar al endpoint JSON)
+        # Preparar datos para el PDF
         resultados = []
         for turno in turnos_pagina:
             persona = crud.get_persona(db, turno.persona_id)
@@ -986,9 +986,8 @@ async def reporte_pdf_turnos_confirmados_periodos(
                 "email_persona": persona.email
             })
         
-        # Generar PDF usando la nueva función
-        pdf_buffer = await asyncio.to_thread(
-            services.generar_pdf_turnos_confirmados_periodos,
+        # CORRECCIÓN: Generar PDF directamente, SIN asyncio.to_thread
+        pdf_buffer = services.generar_pdf_turnos_confirmados_periodos(
             resultados, fecha_desde, fecha_hasta, pagina, total_paginas, total
         )
         
@@ -1054,7 +1053,7 @@ def reporte_csv_turnos_confirmados_periodos(
                 "email_persona": persona.email
             })
         
-        # Generar CSV usando la nueva función
+        # Generar CSV usando función
         csv_buffer = services.generar_csv_turnos_confirmados_periodos(
             resultados, fecha_desde, fecha_hasta, pagina, total_paginas, total
         )
