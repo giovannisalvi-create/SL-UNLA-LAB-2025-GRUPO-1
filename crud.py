@@ -3,6 +3,7 @@ from typing import List, Optional
 import models, schemas
 from datetime import date
 from sqlalchemy import func
+from config import settings
 
 def create_persona(db: Session, persona_in: schemas.PersonaCreate) -> models.Persona:
     persona_db = models.Persona(**persona_in.model_dump())
@@ -16,7 +17,6 @@ def get_personas(db: Session, skip: int = 0, limit: int = 100) -> List[models.Pe
 
 def get_persona(db: Session, persona_id: int) -> Optional[models.Persona]:
     return db.query(models.Persona).filter(models.Persona.id == persona_id).first()
-
 
 def update_persona(db: Session, persona_id: int, persona_up: schemas.PersonaUpdate) -> Optional[models.Persona]:
     persona_db = get_persona(db, persona_id)
@@ -72,25 +72,32 @@ def delete_turno(db: Session, turno_id: int) -> bool:
     db.commit()
     return 
 
-def get_turnos_por_fecha(db: Session, fecha: date):
-    return (
+def get_turnos_por_fecha(db: Session, fecha: date, skip: int = 0, limit: int = None):
+    query = (
         db.query(models.Turno, models.Persona.nombre, models.Persona.dni)
         .join(models.Persona, models.Turno.persona_id == models.Persona.id)
         .filter(models.Turno.fecha == fecha)
-        .all()
     )
+    
+    if limit is not None:
+        query = query.offset(skip).limit(limit)
+    
+    return query.all()
 
-def get_turnos_cancelados_por_mes(db: Session, anio: int, mes: int):
-    return (
+def get_turnos_cancelados_por_mes(db: Session, anio: int, mes: int, skip: int = 0, limit: int = None):
+    query = (
         db.query(models.Turno)
         .filter(
             func.strftime("%Y", models.Turno.fecha) == str(anio),
             func.strftime("%m", models.Turno.fecha) == f"{mes:02d}",
-            models.Turno.estado == "cancelado",
+            models.Turno.estado == settings.ESTADO_CANCELADO,
         )
-        .all()
     )
-
+    
+    if limit is not None:
+        query = query.offset(skip).limit(limit)
+    
+    return query.all()
     
 def get_persona_por_dni(db: Session, dni: str):
     return db.query(models.Persona).filter(models.Persona.dni == dni).first()
@@ -105,5 +112,3 @@ def get_turnos_por_persona_paginado(db: Session, persona_id: int, skip: int = 0,
         .limit(limit)
         .all()
     )
-
-

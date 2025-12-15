@@ -24,10 +24,6 @@ class Turno(Base):
     id = Column(Integer, primary_key=True, index=True)
     fecha = Column(Date, nullable=False, index=True)
     hora = Column(String, nullable=False)
-    #ESTADOS_VALIDOS[0] = "pendiente"
-    #estado = Column(String, default=settings.ESTADOS_VALIDOS[0], nullable=False)
     estado = Column(String, default= settings.ESTADO_PENDIENTE, nullable=False)
     persona_id = Column(Integer, ForeignKey("personas.id"), nullable=False)
     persona = relationship("Persona", back_populates="turnos")
-
-

@@ -1,0 +1,965 @@
+{
+	"info": {
+		"_postman_id": "10267aa8-e46d-467c-a444-37723e964e4d",
+		"name": "My Collection",
+		"description": "### Welcome to Postman! This is your first collection. \n\nCollections are your starting point for building and testing APIs. You can use this one to:\n\n• Group related requests\n• Test your API in real-world scenarios\n• Document and share your requests\n\nUpdate the name and overview whenever you’re ready to make it yours.\n\n[Learn more about Postman Collections.](https://learning.postman.com/docs/collections/collections-overview/)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "48546434",
+		"_collection_link": "https://cejasm96-5484561.postman.co/workspace/SL-P---GRUPO-1's-Workspace~400713a7-73f3-45fe-8e48-c08af882d950/collection/48546434-10267aa8-e46d-467c-a444-37723e964e4d?action=share&source=collection_link&creator=48546434"
+	},
+	"item": [
+		{
+			"name": "Personas",
+			"item": [
+				{
+					"name": "Traer Personas",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/personas",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"personas"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Persona",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n   \"nombre\": \"Juan\",\r\n  \"email\": \"Juan@gmail.com\",\r\n  \"dni\": \"25440033\",\r\n  \"telefono\": \"12345678\",\r\n  \"fecha_nacimiento\": \"1997-05-21\",\r\n  \"habilitado\": true\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8000/personas",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"personas"
+							]
+						},
+						"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+					},
+					"response": []
+				},
+				{
+					"name": "Traer Persona por ID",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/personas/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"personas",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Persona",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"nombre\": \"mariano \",\r\n  \"email\": \"mariano@gmail.com\",\r\n  \"dni\": \"32123596\",\r\n  \"telefono\": \"42448529\",\r\n  \"fecha_nacimiento\": \"1998-10-15\",\r\n  \"habilitado\": true\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/personas/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"personas",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Persona",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/personas/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"personas",
+								"2"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Turnos",
+			"item": [
+				{
+					"name": "Traer Turnos",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Successful POST request\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"name\": \"Add your name in the body\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/turnos",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"turnos"
+							]
+						},
+						"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Turno",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"fecha\": \"2025-11-25\",\r\n  \"hora\": \"10:30\",\r\n  \"estado\": \"confirmado\",\r\n  \"dni\": \"46746944\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/turnos",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"turnos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Traer Turno por ID",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"fecha\": \"2025-09-21\",\r\n  \"hora\": \"12:00\",\r\n  \"estado\": \"pendiente\",\r\n  \"persona_id\": 1\r\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/turnos/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"turnos",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Turno",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"fecha\": \"2025-09-21\",\r\n  \"hora\": \"12:00\",\r\n  \"estado\": \"cancelado\",\r\n  \"persona_id\": 1\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/turnos/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"turnos",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Turno",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/turnos/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"turnos",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Traer Turnos Disponibles",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8000/turnos-disponibles?fecha=2025-09-28",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"turnos-disponibles"
+							],
+							"query": [
+								{
+									"key": "fecha",
+									"value": "2025-09-28"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Turnos Hito 2",
+			"item": [
+				{
+					"name": "Cancelacion de turno",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/turnos/5/cancelar",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"turnos",
+								"5",
+								"cancelar"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Confirmacion de turno",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/turnos/9/confirmar",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"turnos",
+								"9",
+								"confirmar"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reporte de turnos por fecha",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/turnos-por-fecha?fecha=2025-09-19",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"turnos-por-fecha"
+							],
+							"query": [
+								{
+									"key": "fecha",
+									"value": "2025-09-19"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reporte de turnos cancelados por mes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/turnos-cancelados?min=5",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"turnos-cancelados"
+							],
+							"query": [
+								{
+									"key": "min",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reporte de turnos por persona",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/turnos-por-persona?dni=48351225",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"turnos-por-persona"
+							],
+							"query": [
+								{
+									"key": "dni",
+									"value": "48351225"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reporte de turnos cancelados",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/turnos-cancelados?min=1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"turnos-cancelados"
+							],
+							"query": [
+								{
+									"key": "min",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reporte de turnos confirmados por periodos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/turnos-confirmados-periodos?desde=2024-01-01&hasta=2025-10-30&pagina=1&por_pagina=5",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"turnos-confirmados-periodos"
+							],
+							"query": [
+								{
+									"key": "desde",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "hasta",
+									"value": "2025-10-30"
+								},
+								{
+									"key": "pagina",
+									"value": "1"
+								},
+								{
+									"key": "por_pagina",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reporte de estado de personas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/estado-personas",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"estado-personas"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Turnos Hito 3",
+			"item": [
+				{
+					"name": "CSV turnos por fecha",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/csv/turnos-por-fecha?fecha=2025-12-05",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"csv",
+								"turnos-por-fecha"
+							],
+							"query": [
+								{
+									"key": "fecha",
+									"value": "2025-12-05"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PDF turnos por fecha",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/pdf/turnos-por-fecha?fecha=2025-12-05",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"pdf",
+								"turnos-por-fecha"
+							],
+							"query": [
+								{
+									"key": "fecha",
+									"value": "2025-12-05"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PDF turnos cancelados por mes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/pdf/turnos-cancelados-por-mes?mes=12&anio=2025",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"pdf",
+								"turnos-cancelados-por-mes"
+							],
+							"query": [
+								{
+									"key": "mes",
+									"value": "12"
+								},
+								{
+									"key": "anio",
+									"value": "2025"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "CSV turnos cancelados por mes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/csv/turnos-cancelados-por-mes?mes=12&anio=2025",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"csv",
+								"turnos-cancelados-por-mes"
+							],
+							"query": [
+								{
+									"key": "mes",
+									"value": "12"
+								},
+								{
+									"key": "anio",
+									"value": "2025"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PDF turnos por persona",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/pdf/turnos-por-persona?dni=79970023&page=1&size=5",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"pdf",
+								"turnos-por-persona"
+							],
+							"query": [
+								{
+									"key": "dni",
+									"value": "79970023"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "size",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "CSV turnos por persona",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "PDF turnos cancelados",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/turnos-cancelados/pdf",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"turnos-cancelados",
+								"pdf"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "CSV turnos cancelados",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/turnos-cancelados/csv",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"turnos-cancelados",
+								"csv"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PDF estado de persona",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/estado-personas/pdf",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"estado-personas",
+								"pdf"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "CSV estado de persona",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/estado-personas/csv?pagina=1&por_pagina=5",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"estado-personas",
+								"csv"
+							],
+							"query": [
+								{
+									"key": "pagina",
+									"value": "1"
+								},
+								{
+									"key": "por_pagina",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PDF turnos confirmados por periodo",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/turnos-confirmados-periodos/pdf?desde=2025-01-01&hasta=2025-12-31&pagina=1&por_pagina=5",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"turnos-confirmados-periodos",
+								"pdf"
+							],
+							"query": [
+								{
+									"key": "desde",
+									"value": "2025-01-01"
+								},
+								{
+									"key": "hasta",
+									"value": "2025-12-31"
+								},
+								{
+									"key": "pagina",
+									"value": "1"
+								},
+								{
+									"key": "por_pagina",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "CSV turnos confirmados por periodo",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/reportes/turnos-confirmados-periodos/csv?desde=2025-01-01&hasta=2025-12-31&pagina=1&por_pagina=5",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"reportes",
+								"turnos-confirmados-periodos",
+								"csv"
+							],
+							"query": [
+								{
+									"key": "desde",
+									"value": "2025-01-01"
+								},
+								{
+									"key": "hasta",
+									"value": "2025-12-31"
+								},
+								{
+									"key": "pagina",
+									"value": "1"
+								},
+								{
+									"key": "por_pagina",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
