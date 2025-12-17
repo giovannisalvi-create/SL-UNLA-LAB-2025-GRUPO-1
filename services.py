@@ -196,10 +196,8 @@ def generar_csv_turnos_persona_paginado(
     data = []
     for turno, nombre, dni in turnos:
         data.append({
-            "ID Persona": persona.id,
             "Nombre": nombre,
             "DNI": dni,
-            "ID Turno": turno.id,
             "Fecha": turno.fecha,
             "Hora": turno.hora,
             "Estado": turno.estado
@@ -245,18 +243,16 @@ def generar_pdf_turnos_persona_paginado(
 
     table = FixedColumnWidthTable(
         number_of_rows=len(turnos) + 1,
-        number_of_columns=7
+        number_of_columns=5
     )
 
-    headers = ["ID Persona", "Nombre", "DNI", "ID Turno", "Fecha", "Hora", "Estado"]
+    headers = ["Nombre", "DNI", "Fecha", "Hora", "Estado"]
     for h in headers:
         table.add(TableCell(Paragraph(h, font="Helvetica-Bold")))
 
     for turno, nombre, dni in turnos:
-        table.add(TableCell(Paragraph(str(persona.id))))
         table.add(TableCell(Paragraph(nombre)))
         table.add(TableCell(Paragraph(str(dni))))
-        table.add(TableCell(Paragraph(str(turno.id))))
         table.add(TableCell(Paragraph(str(turno.fecha))))
         table.add(TableCell(Paragraph(str(turno.hora))))
         table.add(TableCell(Paragraph(str(turno.estado))))
